@@ -11,9 +11,9 @@
 ## Phase 1: Architecture & Database Initialization
 *Objective: Set up the foundational database schema and project repositories using the finalized 6-table relational structure.*
 
-- [ ] **Task 1.1:** Initialize Git repository and project structure (`/backend`, `/frontend`, `/whatsapp-bot`).
-- [ ] **Task 1.2:** Provision a PostgreSQL database instance.
-- [ ] **Task 1.3:** Create database migration files mapping out the strict 6-table layout detailed below:
+- [x] **Task 1.1:** Initialize Git repository and project structure (`/backend`, `/frontend`, `/whatsapp-bot`).
+- [x] **Task 1.2:** Provision a PostgreSQL database instance via local Docker Compose configuration.
+- [x] **Task 1.3:** Create database migration files mapping out the strict 6-table layout detailed below:
 
 ### Table 1: `users`
 | Field Name | Type | Required | Options/Example | Notes |
@@ -99,63 +99,70 @@
 | `action` | Text | Yes | `Posted Broadcast`, `Formed Hub` | Strict action declaration tracking |
 | `timestamp` | DateTime | Yes | `2026-05-10 14:23` | System execution tracking timestamp |
 
-- [ ] **Task 1.4:** Seed the PostgreSQL schema with 2 Certified BDSP structures, 60 KBS student parameters, and test LGA bounds.
+- [x] **Task 1.4:** Seed the PostgreSQL schema with 2 Certified BDSP structures, 60 KBS student parameters, and test LGA bounds.
 
 ---
 
 ## Phase 2: Core Backend API Development
 *Objective: Build the unified REST engine to parse requests from both Web and WhatsApp channels.*
 
-- [ ] **Task 2.1:** Build registration and login authentication routines mapping directly against the user model fields.
-- [ ] **Task 2.2:** Establish middleware to read the `is_bdsp` flag. Restrict network aggregation views and hub compilation parameters to `is_bdsp=True`.
-- [ ] **Task 2.3:** Implement `posts` pipeline to process BUY/SELL listings securely linking to `user_id`.
-- [ ] **Task 2.4:** Build hub processing logic. Enable BDSPs to aggregate an array of text IDs (`member_user_ids`) into a cohesive cluster.
-- [ ] **Task 2.5:** Program database triggers/hooks to automatically compute the **70% V4V / 30% BDSP Commission split** inside `TABLE 5: deals`.
-- [ ] **Task 2.6:** Configure global event middleware to log every transaction automatically to `TABLE 6: activity_log` for NITDA audit capability.
+- [x] **Task 2.1:** Build registration and login authentication routines mapping directly against the user model fields.
+- [x] **Task 2.2:** Establish middleware to read the `is_bdsp` flag. Restrict network aggregation views and hub compilation parameters to `is_bdsp=True`.
+- [x] **Task 2.3:** Implement `posts` pipeline to process BUY/SELL listings securely linking to `user_id`.
+- [x] **Task 2.4:** Build hub processing logic. Enable BDSPs to aggregate an array of text IDs (`member_user_ids`) into a cohesive cluster.
+- [x] **Task 2.5:** Program database triggers/hooks to automatically compute the **70% V4V / 30% BDSP Commission split** inside `TABLE 5: deals`.
+- [x] **Task 2.6:** Configure global event middleware to log every transaction automatically to `TABLE 6: activity_log` for NITDA audit capability.
 
 ---
 
 ## Phase 3: WhatsApp Bot Integration (Channel 1)
 *Objective: Deploy a lightweight interactive bot interface for field user operations.*
 
-- [ ] **Task 3.1:** Connect a backend listener to process inbound webhooks from the Meta Cloud API / BSP wrapper.
-- [ ] **Task 3.2:** Build conversational text routing tree mapping out interactive registration prompts:
+- [x] **Task 3.1:** Connect a backend listener to process inbound webhooks from the Meta Cloud API / BSP wrapper.
+- [x] **Task 3.2:** Build conversational text routing tree mapping out interactive registration prompts:
   - Capture Name -> Phone -> Primary Role -> LGA selection (`Chikun`).
   - Output explicit **NDPC Data Consent notice**. Capture `True` via button click before recording user to `TABLE 1`.
-- [ ] **Task 3.3:** Build interactive listing tree. Enable farmers and suppliers to configure items (`Maize`, `NPK`), selecting `SELL` or `BUY` type properties to feed `TABLE 3`.
+- [x] **Task 3.3:** Build interactive listing tree. Enable farmers and suppliers to configure items (`Maize`, `NPK`), selecting `SELL` or `BUY` type properties to feed `TABLE 3`.
 
 ---
 
 ## Phase 4: Web Platform Development (Channel 2)
 *Objective: Create the management dashboards for administrative tracking and BDSP cluster oversight.*
 
-- [ ] **Task 4.1:** Scaffold frontend framework architecture with custom theme elements matching enterprise parameters.
-- [ ] **Task 4.2:** Design login interfaces that read user roles directly from database fields.
-- [ ] **Task 4.3:** Build BDSP Network Management Interface:
+- [x] **Task 4.1:** Scaffold frontend framework architecture with custom theme elements matching enterprise parameters.
+- [x] **Task 4.2:** Design login interfaces that read user roles directly from database fields.
+- [x] **Task 4.3:** Build BDSP Network Management Interface:
   - Dynamically read mappings from `TABLE 2: network_members`.
   - Display user distribution metrics, active postings, and aggregate the commission calculations ledger.
-- [ ] **Task 4.4:** Construct the global marketplace timeline grid allowing users to view real-time listings filterable by LGA parameters.
+- [x] **Task 4.4:** Construct the global marketplace timeline grid allowing users to view real-time listings filterable by LGA parameters.
 
 ---
 
 ## Phase 5: Escrow Logic & Deal Simulation
 *Objective: Implement the safe 3-way delivery verification system required for tokenized fund release.*
 
-- [ ] **Task 5.1:** Program mock transaction triggers. Introduce a "Deposit Funds" mechanism to change `escrow_status` safely to `Funds-Held-Placeholder`.
-- [ ] **Task 5.2:** Build separate multi-party authorization tracking endpoints:
-  - Buyer validation endpoint (Confirms receipt at point of delivery).
-  - Trucker confirmation tracking endpoint (Confirms successful haulage transit delivery).
-  - Seller transaction tracking authorization endpoint (Confirms original product dispatch).
-- [ ] **Task 5.3:** Create the automated background transaction service worker:
-  - *Rule Engine:* Listen for change statuses. When Buyer Confirm = `True` AND Trucker Confirm = `True` AND Seller Confirm = `True`:
-  - Automatically update `escrow_status` to "Released", disperse values, and update status records instantly across `hubs` and `posts`.
+- [x] **Task 5.1:** Add `buyer_confirmed_at`, `logistics_confirmed_at`, `seller_confirmed_at` columns to `deals` table + `post_ids` column to `hubs` table for explicit post-linking.
+- [x] **Task 5.2:** Build backend escrow endpoints:
+  - `GET /deals/my` — participant-scoped deal list
+  - `GET /deals/:dealId` — single deal (participant only)
+  - `PATCH /deals/:dealId/deposit` — BDSP deposits funds
+  - `PATCH /deals/:dealId/confirm/buyer` — buyer confirms receipt
+  - `PATCH /deals/:dealId/confirm/logistics` — logistics confirms delivery
+  - `PATCH /deals/:dealId/confirm/seller` — seller confirms dispatch
+  - `PATCH /deals/:dealId/cancel` — BDSP cancels deal
+  - Auto-release: when all 3 confirmations are non-null, escrow_status → Released, hub → Completed, posts → Closed
+- [x] **Task 5.3:** Build frontend Deals page with role-based confirmation UI:
+  - New `DealsView.jsx` component with deal cards, confirmation progress track, role-aware action buttons
+  - Updated `App.jsx` — "Deals" sidebar item for all authenticated users, deals state & fetch
+  - Login screen shows demo credentials for buyer/logistics/seller roles
 
 ---
 
 ## Phase 6: QA, End-to-End Testing & Cloud Deployment
 *Objective: Validate multi-channel data operations and launch the live staging cluster.*
 
-- [ ] **Task 6.1:** Run multi-channel verification tests (e.g., Post a crop listing via WhatsApp bot interface -> confirm matching database persistence inside `TABLE 3` -> inspect near real-time rendering on the Web Marketplace grid).
-- [ ] **Task 6.2:** Verify strict foreign key constraints across relational entries. Ensure automated ID assignment scripts run precisely (`USR_001` -> `USR_002`).
-- [ ] **Task 6.3:** Deploy backend API engine and PostgreSQL database to chosen staging cloud environments.
-- [ ] **Task 6.4:** Execute complete walkthrough simulation involving 1 test BDSP onboarding a new smallholder farmer via WhatsApp, assembling an aggregated hub, processing a mock payment loop, and verifying the audit trail entry.
+- [x] **Task 6.1:** Harden backend config for production — `requireEnv()` helper that fails fast in production when env vars are missing, warns in dev with insecure defaults.
+- [x] **Task 6.2:** Write Dockerfile for backend container deployment on Render.
+- [ ] **Task 6.3:** Deploy backend + PostgreSQL to Render staging environment.
+- [ ] **Task 6.4:** Execute complete walkthrough simulation and update test.md with deployment instructions.
+- [ ] **Task 6.5:** Add GitHub Actions CI for automated deploy on push to main.

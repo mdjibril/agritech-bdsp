@@ -1,0 +1,23 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: agritech-bdsp-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-agritech_bdsp}
+      POSTGRES_USER: ${POSTGRES_USER:-agritech}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-agritech_dev_password}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/db/migrations/001_init_v4v_schema.sql:/docker-entrypoint-initdb.d/001_init_v4v_schema.sql:ro
+      - ./backend/db/seeds/001_seed_phase_1.sql:/docker-entrypoint-initdb.d/002_seed_phase_1.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-agritech} -d ${POSTGRES_DB:-agritech_bdsp}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
