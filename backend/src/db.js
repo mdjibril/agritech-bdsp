@@ -1,9 +1,17 @@
 const { Pool } = require('pg');
 const { config } = require('./config');
 
-const pool = new Pool({
+const poolOptions = {
   connectionString: config.databaseUrl,
-});
+};
+
+if (config.databaseSsl) {
+  poolOptions.ssl = {
+    rejectUnauthorized: config.databaseSslRejectUnauthorized,
+  };
+}
+
+const pool = new Pool(poolOptions);
 
 async function query(text, params) {
   return pool.query(text, params);

@@ -1,3 +1,21 @@
+# start-backend
+```bash
+cd backend
+npm install
+npm start
+```
+# start-frontend
+```bash
+cd frontend
+npm install
+npm run dev
+```
+# start-database
+```bash
+bash scripts/start-postgres.sh
+```
+
+
 # Phase 1 and Phase 2 Test Guide
 
 Run these checks from the project root unless a command says otherwise.
