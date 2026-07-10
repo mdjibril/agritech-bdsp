@@ -885,11 +885,31 @@ These must be set in Render's dashboard or a `.env` file:
 After deploy, run migrations and seed data:
 
 ```bash
-# Get the PostgreSQL URL from Render's dashboard
-# Then run (from local machine after installing psql):
-psql $DATABASE_URL -f backend/db/migrations/001_init_v4v_schema.sql
-psql $DATABASE_URL -f backend/db/seeds/001_seed_phase_1.sql
+# Load the environment from the repo root if needed
+cd /home/mdjibril/Github/agritech-bdsp
+set -a
+source .env
+set +a
+
+# Apply the schema and seed data to the Render PostgreSQL instance
+psql "${DATABASE_URL}?sslmode=require" -f backend/db/migrations/001_init_v4v_schema.sql
+psql "${DATABASE_URL}?sslmode=require" -f backend/db/seeds/001_seed_phase_1.sql
 ```
+
+Verified result from the successful run:
+
+```text
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+...
+COMMIT
+```
+
+The seed script completed successfully and populated the `users`, `network_members`, `posts`, `hubs`, `deals`, and `activity_log` tables.
 
 ### 17d. Deploy frontend to Render
 
@@ -905,16 +925,24 @@ psql $DATABASE_URL -f backend/db/seeds/001_seed_phase_1.sql
 
 ```bash
 # Health check
-curl https://your-backend.onrender.com/health
+curl https://agritech-bdsp-back.onrender.com/health
 
 # Login
-curl -X POST https://your-backend.onrender.com/auth/login \
+curl -X POST https://agritech-bdsp-back.onrender.com/auth/login \
   -H "Content-Type: application/json" \
   -d '{"phone":"+2348100000001","password":"password123"}'
 
 # Marketplace
-curl https://your-backend.onrender.com/posts?status=Active
+curl https://agritech-bdsp-back.onrender.com/posts?status=Active
 ```
+
+Verified successful response from the deployed backend:
+
+```json
+{"status":"ok","database_time":"..."}
+```
+
+And the login endpoint returned a valid auth payload after the schema and seed data were applied.
 
 ### Dockerfile
 
