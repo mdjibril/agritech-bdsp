@@ -1,8 +1,9 @@
-const API_URL = import.meta.env.VITE_API_URL || '/api';
+const API_URL = (import.meta.env.VITE_API_URL || '/api').replace(/\/+$/, '');
 
 export async function api(path, options = {}) {
   const token = localStorage.getItem('v4v_token');
-  const response = await fetch(`${API_URL}${path}`, {
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  const response = await fetch(`${API_URL}${normalizedPath}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
