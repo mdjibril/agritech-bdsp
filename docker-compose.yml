@@ -11,8 +11,8 @@ services:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./backend/db/migrations/001_init_v4v_schema.sql:/docker-entrypoint-initdb.d/001_init_v4v_schema.sql:ro
-      - ./backend/db/seeds/001_seed_phase_1.sql:/docker-entrypoint-initdb.d/002_seed_phase_1.sql:ro
+      - ./backend/db/migrations/002_enterprise_schema.sql:/docker-entrypoint-initdb.d/001_enterprise_schema.sql:ro
+      - ./backend/db/seeds/002_seed_enterprise.sql:/docker-entrypoint-initdb.d/002_seed_enterprise.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-agritech} -d ${POSTGRES_DB:-agritech_bdsp}"]
       interval: 10s

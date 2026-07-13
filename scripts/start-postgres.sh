@@ -17,8 +17,8 @@ else
     -e POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
     -p "$POSTGRES_PORT:5432" \
     -v agritech_bdsp_postgres_data:/var/lib/postgresql/data \
-    -v "$PWD/backend/db/migrations/001_init_v4v_schema.sql:/docker-entrypoint-initdb.d/001_init_v4v_schema.sql:ro" \
-    -v "$PWD/backend/db/seeds/001_seed_phase_1.sql:/docker-entrypoint-initdb.d/002_seed_phase_1.sql:ro" \
+    -v "$PWD/backend/db/migrations/002_enterprise_schema.sql:/docker-entrypoint-initdb.d/001_enterprise_schema.sql:ro" \
+    -v "$PWD/backend/db/seeds/002_seed_enterprise.sql:/docker-entrypoint-initdb.d/002_seed_enterprise.sql:ro" \
     postgres:16-alpine
 fi
 
