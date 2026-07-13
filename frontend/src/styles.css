@@ -89,7 +89,92 @@ table { width: 100%; border-collapse: collapse; min-width: 900px; }th, td { padd
 .deal-details dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 12px 0 0; font-size: 12px; }
 .deal-details dt { color: var(--muted); }
 .icon-button { border: 0; background: transparent; padding: 5px; color: inherit; display: grid; place-items: center; }.mobile-only { display: none; }
-@media (max-width: 1100px) { .metrics-grid { grid-template-columns: repeat(2, 1fr); }.listing-grid { grid-template-columns: repeat(2, 1fr); } }
+
+/* ---- Brand Header ---- */
+.brand-header { z-index: 1; position: relative; }
+.brand-header-inner { display: flex; align-items: center; gap: 14px; }
+.brand-partner { display: flex; align-items: center; gap: 10px; }
+.partner-logo { flex: none; }
+.partner-text strong { display: block; color: white; font-size: 12px; letter-spacing: .8px; }
+.partner-text span { display: block; color: #a9bbb0; font-size: 10px; margin-top: 1px; }
+.brand-divider { width: 1px; height: 30px; background: rgba(255,255,255,.18); }
+
+/* ---- Register Form ---- */
+.register-form .consent-check { display: flex; align-items: start; gap: 12px; font-weight: 400; font-size: 12px; color: var(--muted); line-height: 1.55; }
+.register-form .consent-check input[type="checkbox"] { width: 18px; height: 18px; margin-top: 2px; flex: none; cursor: pointer; }
+.register-form .consent-check span { margin-top: 0; }
+.register-form .form-actions { display: flex; gap: 12px; }
+.register-form .form-actions .secondary-button { flex: 1; }
+.register-form .form-actions .primary-button { flex: 2; }
+
+/* ---- Status Badge Variants ---- */
+.status-badge.success { background: #e8f4ed; color: #187046; }
+.status-badge.warning { background: #fef5e0; color: #8f6f20; }
+.status-badge.danger { background: #fff1ef; color: #b33b2e; }
+.status-badge.info { background: #edf1fa; color: #365e9a; }
+.status-badge.muted { background: #edf0ed; color: #68756d; }
+
+/* ---- Inline Form ---- */
+.inline-form { background: white; border: 1px solid var(--line); border-radius: 6px; padding: 24px; margin-bottom: 18px; }
+.inline-form h3 { font: 700 17px Georgia, serif; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+
+/* ---- Trend ---- */
+.trend { font-size: 11px; font-weight: 700; }
+.trend.up { color: #187046; }
+.trend.down { color: #b33b2e; }
+
+/* ---- KBS Courses ---- */
+.kbs-courses { display: grid; gap: 12px; }
+.course-card { display: flex; align-items: center; gap: 14px; padding: 14px; background: #f7f9f6; border-radius: 6px; }
+.course-icon { width: 38px; height: 38px; background: #eef4e4; color: var(--green-2); display: grid; place-items: center; flex: none; border-radius: 4px; }
+.course-card div { flex: 1; min-width: 0; }
+.course-card strong { display: block; font-size: 13px; }
+.course-card span { display: block; font-size: 11px; color: var(--muted); margin-top: 3px; }
+.primary-button.sm, .secondary-button.sm { min-height: 34px; padding: 0 12px; font-size: 12px; }
+
+/* ---- Admin Health ---- */
+.health-list { display: grid; gap: 8px; }
+.health-item { display: flex; align-items: center; gap: 12px; padding: 12px; background: #f7f9f6; border-radius: 4px; font-size: 13px; }
+.health-item svg { color: var(--green-2); flex: none; }
+.health-item span:first-of-type { flex: 1; }
+.muted-text { color: var(--muted); font-size: 12px; }
+
+/* ---- Filter Chips ---- */
+.filter-group { display: flex; gap: 6px; }
+.filter-chip { border: 1px solid var(--line); background: white; padding: 6px 12px; border-radius: 30px; font-size: 12px; font-weight: 600; color: var(--muted); cursor: pointer; }
+.filter-chip.active { background: var(--green); color: white; border-color: var(--green); }
+
+/* ---- Investor Opportunities ---- */
+.opportunity-list { display: grid; gap: 12px; }
+.opportunity-item { display: flex; align-items: center; gap: 14px; padding: 14px; background: #f7f9f6; border-radius: 6px; }
+.opportunity-icon { width: 38px; height: 38px; background: #edf1fa; color: #365e9a; display: grid; place-items: center; flex: none; border-radius: 4px; }
+.opportunity-body { flex: 1; min-width: 0; }
+.opportunity-body strong { display: block; font-size: 13px; }
+.opportunity-body span { display: block; font-size: 11px; color: var(--muted); margin-top: 2px; }
+.opportunity-size { font-size: 15px; color: var(--green); margin-top: 4px !important; }
+
+/* ---- Report Items ---- */
+.report-list { display: grid; gap: 10px; }
+.report-item { display: flex; align-items: center; gap: 14px; padding: 16px; background: #f7f9f6; border-radius: 6px; }
+.report-item svg { color: var(--green-2); flex: none; }
+.report-item div { flex: 1; min-width: 0; }
+.report-item strong { display: block; font-size: 13px; }
+.report-item span { display: block; font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+/* ---- Route Pair ---- */
+.route-pair { font-size: 12px; color: var(--muted); }
+
+/* ---- Panel Head with action ---- */
+.panel-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.panel-head > div { min-width: 0; }
+.panel-head .search { width: 240px; flex: none; }
+
+@media (max-width: 1100px) {
+  .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+  .listing-grid { grid-template-columns: repeat(2, 1fr); }
+  .form-grid { grid-template-columns: 1fr; }
+}
 @media (max-width: 760px) {
   .login-shell { grid-template-columns: 1fr; }.login-brand { min-height: 42vh; padding: 30px 24px; }.login-brand h1 { font-size: 34px; margin-top: 45px; }.login-intro { font-size: 15px; }.trust-row { display: none; }.login-panel { padding: 38px 24px; }
   .app-shell { display: block; }.workspace { min-width: 0; }.sidebar { transform: translateX(-100%); transition: transform .2s; box-shadow: 15px 0 30px rgba(0,0,0,.15); }.sidebar.open { transform: translateX(0); }.mobile-only { display: grid; }.topbar { padding: 0 18px; }.topbar > div:nth-child(2) { margin-right: auto; margin-left: 12px; }.page { padding: 26px 16px 50px; }.page-head { align-items: start; flex-direction: column; }.page-head h1 { font-size: 24px; }

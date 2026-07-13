@@ -1,9 +1,11 @@
-const API_URL = (import.meta.env.VITE_API_URL || '/api').replace(/\/+$/, '');
+const API_PREFIX = '/api';
 
 export async function api(path, options = {}) {
   const token = localStorage.getItem('v4v_token');
-  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-  const response = await fetch(`${API_URL}${normalizedPath}`, {
+  const url = path.startsWith(API_PREFIX)
+    ? path
+    : `${API_PREFIX}${path.startsWith('/') ? path : `/${path}`}`;
+  const response = await fetch(url, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -14,6 +16,10 @@ export async function api(path, options = {}) {
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(payload.error || 'Request failed');
   return payload;
+}
+
+export async function apiV1(path, options = {}) {
+  return api(`/v1${path.startsWith('/') ? path : `/${path}`}`, options);
 }
 
 export function money(value) {

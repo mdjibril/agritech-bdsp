@@ -150,28 +150,28 @@
 - [x] **Task 5.2:** Built **Escrow Account Confirmation Voucher** template (`services/templates/escrowVoucher.js`) with transaction details, escrow state, parties, commission breakdown, and dual POD status. API: `POST /api/v1/documents/escrow-voucher/:txId` (save + download).
 - [x] **Task 5.3:** Built **Digital Insurance Certificate** template (`services/templates/insuranceCertificate.js`) pulling policy data + holder info from `insurance_policies` and `actors`. API: `POST /api/v1/documents/insurance-cert/:policyId`.
 - [x] **Task 5.4:** Created **partner mock service** (`services/partnerMock.js`) with mockInsuranceQuote (NAIC/AXA rates), mockBankLoanApproval (credit score-based), mockBankPayout, mockInsuranceClaim. API: `POST /api/v1/mocks/insurance/quote`, `/bank/loan-approval`, `/bank/payout`, `/insurance/claim`.
-- [x] **Task 5.5 (Git Workflow):** Committed, merged, and pushed to main.
+- [x] **Task 5.5 (Git Workflow):** Committed, merged to `main`, and pushed.
 
 ---
 
 ## Phase 6: Role-Based Dashboards & Frontend Layouts
 *Objective: Build a mobile-optimized frontend using persistent branding headers (KBS, AGRA logos) and separate view configurations mapped to the 9 user roles.*
 
-- [ ] **Task 6.0 (Git Workflow):** Create and checkout a new isolated frontend development branch:
+- [x] **Task 6.0 (Git Workflow):** Created and checked out frontend development branch:
   `git checkout -b feature/phase-6-role-dashboards`
-- [ ] **Task 6.1:** Place high-visibility **KBS and AGRA partner branding logos** into the master layout application header across all application states.
-- [ ] **Task 6.2:** Develop registration interfaces capturing phone records, custom bank detail entries, and an explicit role assignment selector field.
-- [ ] **Task 6.3:** Implement the **9 Distinct Role Dashboards** via dynamic conditional state parameters:
-  *   **SHF Interface:** Form inputs to post crop harvests, clean visualization vectors to view pending aggregator offers, and live payout status monitors.
-  *   **Aggregator Interface:** Live purchasing dashboard to search distributed SHF harvest offers, batch procurement filters, and logistics assignment tools.
-  *   **Input Vendor Interface:** Inventory listing management portal, real-time inbound product order alerts, and transaction history cards.
-  *   **BDSP Interface:** Downline network view (list of farmers onboarded by their specific account ID), commission trackers, and localized performance KPI cards.
-  *   **Logistics Partner Interface:** Open freight/delivery job acceptance boards, routing maps, and double-lock POD submission controls (Trucker confirmation switch).
-  *   **KBS Interface:** Training hub master view, digital student/BDSP certification action triggers, and global performance report generation toolsets.
-  *   **AGRA Interface:** High-level strategic analytical layout, aggregate macroeconomic regional production summaries, and automated NDPR-compliant export handlers.
-  *   **Investor Interface:** Capital distribution tracking maps, open credit facility opportunities, and aggregated agricultural loan portfolio trackers.
-  *   **V4V Admin Interface:** Comprehensive system control panel, open escrow ledger overrides, manual conflict reconciliation workflows, and system health monitors.
-- [ ] **Task 6.4 (Git Workflow):** Commit changes, push to remote, and merge `feature/phase-6-role-dashboards` back to `main`.
+- [x] **Task 6.1:** Placed high-visibility **KBS and AGRA partner branding logos** in `BrandHeader.jsx` — visible on login, register, and all dashboard views.
+- [x] **Task 6.2:** Developed 2-step registration form (`RegisterForm.jsx`) capturing phone, bank details, 9-role selector, NDPC consent, and bank/password fields.
+- [x] **Task 6.3:** Implemented **9 Distinct Role Dashboards** (`/dashboards/`):
+  *   **SHF Interface:** Post harvest form, transaction history, earnings metrics.
+  *   **Aggregator Interface:** Purchase ledger with search, active/completed/spent metrics.
+  *   **Input Vendor Interface:** Inventory listing form, order alerts, revenue tracking.
+  *   **BDSP Interface:** Downline network table, gender distribution (IFC KPI), 70/30 commission split.
+  *   **Logistics Interface:** Freight job board, trucker POD confirmation button, route labels.
+  *   **KBS Interface:** 4 training courses, aggregate KPIs, transaction feed.
+  *   **AGRA Interface:** Commodity distribution bars, regional summary, NDPR export handler.
+  *   **Investor Interface:** 3 credit facility opportunities, portfolio snapshot.
+  *   **V4V Admin Interface:** Escrow ledger (all/active/disputed filters), system health panel, commission ledger.
+- [x] **Task 6.4 (Git Workflow):** Committed, pushed, and merged `feature/phase-6-role-dashboards` back to `main`.
   `git add . && git commit -m "Phase 6 complete: 9 role dashboards & branding integration"`
   `git checkout main && git merge feature/phase-6-role-dashboards`
 
