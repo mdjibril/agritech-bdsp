@@ -2,7 +2,7 @@ const path = require('node:path');
 const dotenv = require('dotenv');
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
-dotenv.config({ path: path.resolve(__dirname, '../.env'), override: false });
+dotenv.config({ path: path.resolve(__dirname, '../.env'), override: true });
 
 const isProduction = process.env.NODE_ENV === 'production';
 

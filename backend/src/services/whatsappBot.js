@@ -4,23 +4,15 @@ const { config } = require('../config');
 
 const sessions = new Map();
 
-const VALID_ROLES = ['SHF', 'Buyer', 'Input Dealer', 'Logistics'];
-const VALID_GENDERS = ['Male', 'Female'];
-const VALID_POST_TYPES = ['SELL', 'BUY'];
-const VALID_CATEGORIES = ['Crop', 'Livestock', 'Input'];
-const VALID_UNITS = ['MT', 'Bags', 'Heads'];
+const VALID_ACTOR_TYPES = ['SHF', 'AGGREGATOR', 'INPUT_VENDOR', 'LOGISTICS', 'BDSP', 'KBS', 'AGRA', 'INVESTOR', 'V4V_ADMIN'];
+const VALID_GENDERS = ['MALE', 'FEMALE', 'OTHER'];
+const VALID_CHANNELS = ['USSD', 'WHATSAPP', 'WEB', 'APP'];
 
 function normalizePhone(phone) {
-  if (!phone) {
-    return '';
-  }
+  if (!phone) return '';
   const cleaned = String(phone).trim().replace(/[^\d+]/g, '');
-  if (cleaned.startsWith('+')) {
-    return cleaned;
-  }
-  if (cleaned.startsWith('0')) {
-    return `+234${cleaned.slice(1)}`;
-  }
+  if (cleaned.startsWith('+')) return cleaned;
+  if (cleaned.startsWith('0')) return `+234${cleaned.slice(1)}`;
   return `+${cleaned}`;
 }
 
@@ -31,10 +23,7 @@ function normalizeText(text) {
 function readMetaMessage(payload) {
   const value = payload?.entry?.[0]?.changes?.[0]?.value;
   const message = value?.messages?.[0];
-  if (!message) {
-    return null;
-  }
-
+  if (!message) return null;
   const interactive = message.interactive?.button_reply || message.interactive?.list_reply;
   return {
     from: normalizePhone(message.from),
@@ -45,9 +34,7 @@ function readMetaMessage(payload) {
 }
 
 function readLocalMessage(payload) {
-  if (!payload?.from || payload.text === undefined) {
-    return null;
-  }
+  if (!payload?.from || payload.text === undefined) return null;
   return {
     from: normalizePhone(payload.from),
     text: normalizeText(payload.text),
@@ -64,17 +51,13 @@ function menuText() {
   return [
     'V4V Agritech menu:',
     '1. Reply REGISTER to onboard.',
-    '2. Reply POST to create a BUY or SELL listing.',
+    '2. Reply POST to create a SELL listing.',
     '3. Reply MENU anytime to restart.',
   ].join('\n');
 }
 
 function rolePrompt() {
-  return 'Select primary role: SHF, Buyer, Input Dealer, or Logistics.';
-}
-
-function categoryPrompt() {
-  return 'Select category: Crop, Livestock, or Input.';
+  return 'Select role: SHF, AGGREGATOR, INPUT_VENDOR, LOGISTICS, BDSP, KBS, AGRA, INVESTOR, or V4V_ADMIN.';
 }
 
 function resetSession(phone, mode) {
@@ -97,15 +80,13 @@ function parseChoice(input, validValues) {
 }
 
 function parseNumber(input) {
-  const numberValue = Number(input);
-  return Number.isFinite(numberValue) ? numberValue : null;
+  const n = Number(input);
+  return Number.isFinite(n) ? n : null;
 }
 
-async function findUserByPhone(phone) {
+async function findActorByPhone(phone) {
   const result = await query(
-    `SELECT user_id, phone, full_name, primary_role, secondary_roles, is_bdsp, gender, lga, ward
-     FROM users
-     WHERE phone = $1`,
+    `SELECT actor_id, phone, full_name, actor_type FROM actors WHERE phone = $1`,
     [phone],
   );
   return result.rows[0] || null;
@@ -116,17 +97,14 @@ async function createWhatsAppUser(data) {
 
   return transaction(async (client) => {
     const result = await client.query(
-      `INSERT INTO users (
-        onboarded_by, full_name, phone, password_hash, primary_role, secondary_roles,
-        is_bdsp, bdsp_certified_by, gender, lga, ndpc_consent
-      )
-      VALUES ('Self', $1, $2, $3, $4, ARRAY[]::text[], false, NULL, $5, 'Chikun', true)
-      RETURNING user_id, phone, full_name, primary_role, gender, lga`,
-      [data.full_name, data.phone, passwordHash, data.primary_role, data.gender],
+      `INSERT INTO actors (full_name, phone, password_hash, actor_type, channel, bank_name, account_number, gender, lga, state, kyc_status)
+       VALUES ($1, $2, $3, $4, 'WHATSAPP', $5, $6, $7, 'Chikun', 'Kaduna', 'PENDING')
+       RETURNING actor_id, phone, full_name, actor_type, channel, gender, lga, state`,
+      [data.full_name, data.phone, passwordHash, data.actor_type, data.bank_name, data.account_number, data.gender],
     );
 
-    await client.query('INSERT INTO activity_log (user_id, action) VALUES ($1, $2)', [
-      result.rows[0].user_id,
+    await client.query('INSERT INTO activity_log (actor_id, action) VALUES ($1, $2)', [
+      result.rows[0].actor_id,
       'Registered user via WhatsApp',
     ]);
 
@@ -134,28 +112,22 @@ async function createWhatsAppUser(data) {
   });
 }
 
-async function createWhatsAppPost(userId, data) {
+async function createWhatsAppPost(phone, data) {
+  const actor = await findActorByPhone(phone);
+  if (!actor) return null;
+
+  // Create a simple transaction as a SELL listing
   return transaction(async (client) => {
     const result = await client.query(
-      `INSERT INTO posts (
-        user_id, post_type, category, item_name, quantity, unit, price_per_unit, lga
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, 'Chikun')
-      RETURNING post_id, post_type, category, item_name, quantity, unit, price_per_unit, status`,
-      [
-        userId,
-        data.post_type,
-        data.category,
-        data.item_name,
-        data.quantity,
-        data.unit,
-        data.price_per_unit,
-      ],
+      `INSERT INTO transactions (buyer_id, seller_id, commodity, quantity_kg, unit_price)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING tx_id, commodity, quantity_kg, unit_price, total_amount, status`,
+      [1, actor.actor_id, data.item_name, data.quantity, data.price_per_unit]
     );
 
-    await client.query('INSERT INTO activity_log (user_id, action) VALUES ($1, $2)', [
-      userId,
-      `Created WhatsApp ${data.post_type} post ${result.rows[0].post_id}`,
+    await client.query('INSERT INTO activity_log (actor_id, action) VALUES ($1, $2)', [
+      actor.actor_id,
+      `Created WhatsApp SELL listing: ${data.quantity}kg ${data.item_name}`,
     ]);
 
     return result.rows[0];
@@ -176,31 +148,39 @@ async function handleRegister(phone, text, session) {
 
   if (session.step === 'phone') {
     session.data.phone = normalizePhone(text);
-    const existingUser = await findUserByPhone(session.data.phone);
-    if (existingUser) {
+    const existing = await findActorByPhone(session.data.phone);
+    if (existing) {
       clearSession(phone);
-      return [`This phone is already registered as ${existingUser.full_name}. Reply POST to create a listing.`];
+      return [`This phone is already registered as ${existing.full_name}. Reply POST to create a listing.`];
     }
     session.step = 'role';
     return [rolePrompt()];
   }
 
   if (session.step === 'role') {
-    const role = parseChoice(text, VALID_ROLES);
-    if (!role) {
-      return [rolePrompt()];
-    }
-    session.data.primary_role = role;
+    const role = parseChoice(text, VALID_ACTOR_TYPES);
+    if (!role) return [rolePrompt()];
+    session.data.actor_type = role;
     session.step = 'gender';
-    return ['Select gender for KPI reporting: Male or Female.'];
+    return ['Select gender for IFC KPI reporting: MALE, FEMALE, or OTHER.'];
   }
 
   if (session.step === 'gender') {
     const gender = parseChoice(text, VALID_GENDERS);
-    if (!gender) {
-      return ['Select gender: Male or Female.'];
-    }
+    if (!gender) return ['Select gender: MALE, FEMALE, or OTHER.'];
     session.data.gender = gender;
+    session.step = 'bank_name';
+    return ['Enter your bank name for payout routing (e.g., GTBank, Zenith, UBA).'];
+  }
+
+  if (session.step === 'bank_name') {
+    session.data.bank_name = text;
+    session.step = 'account_number';
+    return ['Enter your bank account number for payouts.'];
+  }
+
+  if (session.step === 'account_number') {
+    session.data.account_number = text;
     session.step = 'lga';
     return ['Enter LGA. For this POC, only Chikun is accepted.'];
   }
@@ -209,7 +189,6 @@ async function handleRegister(phone, text, session) {
     if (text.toLowerCase() !== 'chikun') {
       return ['This POC is restricted to Chikun LGA. Reply Chikun to continue.'];
     }
-    session.data.lga = 'Chikun';
     session.step = 'consent';
     return [
       'NDPC Consent Notice: V4V will store your identity, phone, role, location, and market activity for onboarding, marketplace matching, audit, and POC reporting. Reply YES to consent or NO to cancel.',
@@ -221,7 +200,6 @@ async function handleRegister(phone, text, session) {
       clearSession(phone);
       return ['Registration cancelled. Your data was not saved. Reply REGISTER to start again.'];
     }
-
     session.step = 'password';
     return ['Choose a password for your account (minimum 8 characters).'];
   }
@@ -230,12 +208,11 @@ async function handleRegister(phone, text, session) {
     if (!text || String(text).trim().length < 8) {
       return ['Password must be at least 8 characters. Choose a password for your account.'];
     }
-
     session.data.password = String(text).trim();
-    const user = await createWhatsAppUser(session.data);
+    const actor = await createWhatsAppUser(session.data);
     clearSession(phone);
     return [
-      `Registration complete. Your V4V ID is ${user.user_id}. Reply POST to create a BUY or SELL listing.`,
+      `Registration complete. Your V4V ID is ACT_${String(actor.actor_id).padStart(3, '0')}. Reply POST to create a SELL listing.`,
     ];
   }
 
@@ -244,74 +221,42 @@ async function handleRegister(phone, text, session) {
 
 async function handlePost(phone, text, session) {
   if (session.step === 'start') {
-    const user = await findUserByPhone(phone);
-    if (!user) {
+    const actor = await findActorByPhone(phone);
+    if (!actor) {
       clearSession(phone);
       return ['You need to register first. Reply REGISTER to start onboarding.'];
     }
-    session.data.user_id = user.user_id;
-    session.step = 'post_type';
-    return ['Create listing. Reply SELL or BUY.'];
-  }
-
-  if (session.step === 'post_type') {
-    const postType = parseChoice(text, VALID_POST_TYPES);
-    if (!postType) {
-      return ['Reply SELL or BUY.'];
-    }
-    session.data.post_type = postType;
-    session.step = 'category';
-    return [categoryPrompt()];
-  }
-
-  if (session.step === 'category') {
-    const category = parseChoice(text, VALID_CATEGORIES);
-    if (!category) {
-      return [categoryPrompt()];
-    }
-    session.data.category = category;
     session.step = 'item_name';
-    return ['Enter item name, e.g. Maize, Soybean, NPK, or Goats.'];
+    return ['Enter item name, e.g. Maize, Soybean, Rice, or Cassava.'];
   }
 
   if (session.step === 'item_name') {
     session.data.item_name = text;
     session.step = 'quantity';
-    return ['Enter quantity as a number.'];
+    return ['Enter quantity in kilograms as a number.'];
   }
 
   if (session.step === 'quantity') {
     const quantity = parseNumber(text);
-    if (!quantity || quantity <= 0) {
-      return ['Quantity must be a positive number.'];
-    }
+    if (!quantity || quantity <= 0) return ['Quantity must be a positive number.'];
     session.data.quantity = quantity;
-    session.step = 'unit';
-    return ['Enter unit: MT, Bags, or Heads.'];
-  }
-
-  if (session.step === 'unit') {
-    const unit = parseChoice(text, VALID_UNITS);
-    if (!unit) {
-      return ['Enter unit: MT, Bags, or Heads.'];
-    }
-    session.data.unit = unit;
     session.step = 'price';
-    return ['Enter price per unit in Naira.'];
+    return ['Enter price per kg in Naira (e.g., 450).'];
   }
 
   if (session.step === 'price') {
     const price = parseNumber(text);
-    if (price === null || price < 0) {
-      return ['Price must be zero or a positive number.'];
-    }
+    if (price === null || price < 0) return ['Price must be zero or a positive number.'];
     session.data.price_per_unit = price;
 
-    const post = await createWhatsAppPost(session.data.user_id, session.data);
+    const post = await createWhatsAppPost(phone, session.data);
     clearSession(phone);
-    return [
-      `Listing created: ${post.post_id} ${post.post_type} ${post.quantity} ${post.unit} of ${post.item_name} at NGN ${post.price_per_unit}/unit. Status: ${post.status}.`,
-    ];
+    if (post) {
+      return [
+        `Listing created: ${post.quantity_kg}kg ${post.commodity} at ₦${post.unit_price}/kg. Total: ₦${post.total_amount}. Status: ${post.status}.`,
+      ];
+    }
+    return ['Error creating listing. Try again.'];
   }
 
   return [menuText()];
@@ -322,9 +267,7 @@ async function handleInboundMessage(message) {
   const text = normalizeText(message.text);
   const command = text.toLowerCase();
 
-  if (!phone || !text) {
-    return ['Please send a text message.'];
-  }
+  if (!phone || !text) return ['Please send a text message.'];
 
   if (['menu', 'hi', 'hello', 'start'].includes(command)) {
     clearSession(phone);
@@ -340,17 +283,10 @@ async function handleInboundMessage(message) {
   }
 
   const session = getSession(phone);
-  if (!session) {
-    return [menuText()];
-  }
+  if (!session) return [menuText()];
 
-  if (session.mode === 'register') {
-    return handleRegister(phone, text, session);
-  }
-
-  if (session.mode === 'post') {
-    return handlePost(phone, text, session);
-  }
+  if (session.mode === 'register') return handleRegister(phone, text, session);
+  if (session.mode === 'post') return handlePost(phone, text, session);
 
   clearSession(phone);
   return [menuText()];

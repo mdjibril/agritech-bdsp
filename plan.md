@@ -128,18 +128,13 @@
 ## Phase 4: Enterprise API & Dual-Lock Middleware Extension
 *Objective: Build core business logic handling 9-role signups, automatic commissions, and double-confirmation tracking.*
 
-- [ ] **Task 4.0 (Git Workflow):** Create and checkout a new isolated API development branch:
+- [x] **Task 4.0 (Git Workflow):** Created and checked out API development branch:
   `git checkout -b feature/phase-4-middleware-api`
-- [ ] **Task 4.1:** Build standard authentication pipelines using an internal Phone + Mock WhatsApp OTP validation simulator that requires bank details on signup.
-- [ ] **Task 4.2:** Implement the **NDPC Regulatory Consent Middleware**:
-  > Intercept all structural write commands on `/actors/register`. If explicit user data-consent flags are missing, block execution and return `Error 400: { "status": "error", "message": "NDPC data privacy consent required" }`.
-- [ ] **Task 4.3:** Program the **Automated Marketplace Revenue Engine Hook**:
-  > Create an async database listener or application service hook to fire upon successful deal creation. If transaction total exceeds $50, lock funds in escrow and calculate platform distribution margins:
-  > `commission_v4v = total_amount * 0.02 * 0.70`
-  > `commission_bdsp = total_amount * 0.02 * 0.30`
-- [ ] **Task 4.4:** Build the **Dual POD Escalation Verification Route** (`/api/v1/transactions/:id/confirm-pod`):
-  > Accept flags for either `trucker_pod_confirmed` or `buyer_pod_confirmed`. Escrow funds state cannot transition to `RELEASED_TO_SELLER` until both boolean records resolve to true.
-- [ ] **Task 4.5:** Implement automated text logging handlers to mirror all transactional modifications into local audit trail storage to maintain strict NITDA 2019 compliance.
+- [x] **Task 4.1:** Built hybrid auth pipeline: `/api/v1/auth/send-otp` (mock OTP), `/api/v1/auth/register` (with bank_name, account_number, actor_type), `/api/v1/auth/login`. WhatsApp bot updated for 9 roles + bank capture.
+- [x] **Task 4.2:** Implemented `middleware/ndpcConsent.js` — blocks `/api/v1/auth/register` without `ndpc_consent=true`, returns `400: {"error":"NDPC data privacy consent required"}`.
+- [x] **Task 4.3:** Built unified atomic service in `POST /api/v1/transactions` — creates transaction + auto-funds escrow in one DB transaction when `escrow_required=true` (qty×price > $50). Commission trigger auto-calculates `commission_v4v = total_amount × 0.02 × 0.70` and `commission_bdsp = total_amount × 0.02 × 0.30`.
+- [x] **Task 4.4:** Built **Dual POD Verification Route** (`POST /api/v1/transactions/:id/confirm-pod`): accepts `{role: "trucker"|"buyer"}`. Escrow auto-releases to RELEASED_TO_SELLER and transaction goes to COMPLETED when both confirm. Seller wallet credited atomically.
+- [x] **Task 4.5:** Rewrote `middleware/audit.js` to write all authenticated POST/PUT/PATCH/DELETE operations to new `activity_log` table with `actor_id` FK. All routes set `res.locals.auditAction` with descriptive action strings.
 - [ ] **Task 4.6 (Git Workflow):** Commit changes, push to remote, and merge `feature/phase-4-middleware-api` back to `main`.
   `git add . && git commit -m "Phase 4 complete: Dual-lock logic & 9-role API endpoints"`
   `git checkout main && git merge feature/phase-4-middleware-api`

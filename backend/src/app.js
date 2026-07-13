@@ -6,11 +6,20 @@ const { query } = require('./db');
 const { HttpError } = require('./httpError');
 const { optionalAuth } = require('./middleware/auth');
 const { auditAuthenticatedWrites } = require('./middleware/audit');
-const authRoutes = require('./routes/auth');
-const postRoutes = require('./routes/posts');
-const hubRoutes = require('./routes/hubs');
-const dealRoutes = require('./routes/deals');
-const bdspRoutes = require('./routes/bdsp');
+
+// V1 enterprise routes
+const v1AuthRoutes = require('./routes/v1/auth');
+const v1TransactionRoutes = require('./routes/v1/transactions');
+const v1ActorRoutes = require('./routes/v1/actors');
+const v1EscrowRoutes = require('./routes/v1/escrow');
+
+// Backward-compatibility shim routes (legacy frontend expects these)
+const shimAuthRoutes = require('./routes/shim/auth');
+const shimPostRoutes = require('./routes/shim/posts');
+const shimDealRoutes = require('./routes/shim/deals');
+const shimBdspRoutes = require('./routes/shim/bdsp');
+
+// Legacy routes (keep WhatsApp working)
 const whatsappRoutes = require('./routes/whatsapp');
 
 const app = express();
@@ -22,6 +31,7 @@ app.use(morgan('dev'));
 app.use(optionalAuth);
 app.use(auditAuthenticatedWrites);
 
+// Health check
 app.get('/health', async (_req, res, next) => {
   try {
     const result = await query('SELECT now() AS database_time');
@@ -31,28 +41,34 @@ app.get('/health', async (_req, res, next) => {
   }
 });
 
-app.use('/auth', authRoutes);
-app.use('/posts', postRoutes);
-app.use('/hubs', hubRoutes);
-app.use('/deals', dealRoutes);
-app.use('/bdsp', bdspRoutes);
+// V1 Enterprise API
+app.use('/api/v1/auth', v1AuthRoutes);
+app.use('/api/v1/transactions', v1TransactionRoutes);
+app.use('/api/v1/actors', v1ActorRoutes);
+app.use('/api/v1/escrow', v1EscrowRoutes);
+
+// Backward-compatibility shims
+app.use('/auth', shimAuthRoutes);
+app.use('/posts', shimPostRoutes);
+app.use('/deals', shimDealRoutes);
+app.use('/bdsp', shimBdspRoutes);
+
+// WhatsApp webhook (keep working)
 app.use('/whatsapp', whatsappRoutes);
 
+// 404 catch-all
 app.use((_req, _res, next) => {
   next(new HttpError(404, 'Route not found'));
 });
 
+// Error handler
 app.use((error, _req, res, _next) => {
   const status = error.status || (error.code && error.code.startsWith('23') ? 400 : 500);
   const response = {
     error: error.message || 'Internal server error',
   };
-  if (error.details) {
-    response.details = error.details;
-  }
-  if (process.env.NODE_ENV !== 'production' && status === 500) {
-    response.stack = error.stack;
-  }
+  if (error.details) response.details = error.details;
+  if (process.env.NODE_ENV !== 'production' && status === 500) response.stack = error.stack;
   res.status(status).json(response);
 });
 
