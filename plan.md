@@ -135,7 +135,7 @@
 - [x] **Task 4.3:** Built unified atomic service in `POST /api/v1/transactions` — creates transaction + auto-funds escrow in one DB transaction when `escrow_required=true` (qty×price > $50). Commission trigger auto-calculates `commission_v4v = total_amount × 0.02 × 0.70` and `commission_bdsp = total_amount × 0.02 × 0.30`.
 - [x] **Task 4.4:** Built **Dual POD Verification Route** (`POST /api/v1/transactions/:id/confirm-pod`): accepts `{role: "trucker"|"buyer"}`. Escrow auto-releases to RELEASED_TO_SELLER and transaction goes to COMPLETED when both confirm. Seller wallet credited atomically.
 - [x] **Task 4.5:** Rewrote `middleware/audit.js` to write all authenticated POST/PUT/PATCH/DELETE operations to new `activity_log` table with `actor_id` FK. All routes set `res.locals.auditAction` with descriptive action strings.
-- [ ] **Task 4.6 (Git Workflow):** Commit changes, push to remote, and merge `feature/phase-4-middleware-api` back to `main`.
+- [x] **Task 4.6 (Git Workflow):** Committed, pushed, and merged `feature/phase-4-middleware-api` back to `main`.
   `git add . && git commit -m "Phase 4 complete: Dual-lock logic & 9-role API endpoints"`
   `git checkout main && git merge feature/phase-4-middleware-api`
 
