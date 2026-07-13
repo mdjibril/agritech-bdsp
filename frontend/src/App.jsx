@@ -206,7 +206,7 @@ export default function App() {
   }
 
   async function login(phone, password) {
-    const result = await api('/auth/login', {
+    const result = await apiV1('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ phone, password }),
     });
