@@ -144,15 +144,13 @@
 ## Phase 5: Local Document Engines & Partner Mocking
 *Objective: Construct localized template rendering engines without using external cloud platform APIs.*
 
-- [ ] **Task 5.0 (Git Workflow):** Create and checkout a new isolated document engine branch:
+- [x] **Task 5.0 (Git Workflow):** Created and checked out document engine branch:
   `git checkout -b feature/phase-5-document-engines`
-- [ ] **Task 5.1:** Integrate a decoupled local document compiler library (e.g., `FPDF` or `jsPDF`) into the core runtime engine.
-- [ ] **Task 5.2:** Build the standardized **Escrow Account Confirmation Voucher Template** mapping out tracking references, payment amounts, and holding locks. Save generated documents directly to local project paths: `/var/www/v4v.ng/pdfs/`.
-- [ ] **Task 5.3:** Build the standardized **Digital Insurance Certificate Template** pulling active relational data parameters directly from `insurance_policies`.
-- [ ] **Task 5.4:** Create structured API data mocking switches to return test data configurations representing external services like NAIC, AXA, or partner bank systems.
-- [ ] **Task 5.5 (Git Workflow):** Commit changes, push to remote, and merge `feature/phase-5-document-engines` back to `main`.
-  `git add . && git commit -m "Phase 5 complete: Local document engines & partner mocks operational"`
-  `git checkout main && git merge feature/phase-5-document-engines`
+- [x] **Task 5.1:** Integrated `pdfkit` (Node.js PDF library) with shared engine (`services/pdfEngine.js`) providing createDocument, addHeader, addFooter, savePdf, streamPdf. Output dir configurable via `PDF_OUTPUT_DIR` env var.
+- [x] **Task 5.2:** Built **Escrow Account Confirmation Voucher** template (`services/templates/escrowVoucher.js`) with transaction details, escrow state, parties, commission breakdown, and dual POD status. API: `POST /api/v1/documents/escrow-voucher/:txId` (save + download).
+- [x] **Task 5.3:** Built **Digital Insurance Certificate** template (`services/templates/insuranceCertificate.js`) pulling policy data + holder info from `insurance_policies` and `actors`. API: `POST /api/v1/documents/insurance-cert/:policyId`.
+- [x] **Task 5.4:** Created **partner mock service** (`services/partnerMock.js`) with mockInsuranceQuote (NAIC/AXA rates), mockBankLoanApproval (credit score-based), mockBankPayout, mockInsuranceClaim. API: `POST /api/v1/mocks/insurance/quote`, `/bank/loan-approval`, `/bank/payout`, `/insurance/claim`.
+- [x] **Task 5.5 (Git Workflow):** Committed, merged, and pushed to main.
 
 ---
 

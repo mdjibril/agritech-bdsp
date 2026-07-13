@@ -12,6 +12,8 @@ const v1AuthRoutes = require('./routes/v1/auth');
 const v1TransactionRoutes = require('./routes/v1/transactions');
 const v1ActorRoutes = require('./routes/v1/actors');
 const v1EscrowRoutes = require('./routes/v1/escrow');
+const v1DocumentRoutes = require('./routes/v1/documents');
+const v1MockRoutes = require('./routes/v1/mocks');
 
 // Backward-compatibility shim routes (legacy frontend expects these)
 const shimAuthRoutes = require('./routes/shim/auth');
@@ -46,6 +48,8 @@ app.use('/api/v1/auth', v1AuthRoutes);
 app.use('/api/v1/transactions', v1TransactionRoutes);
 app.use('/api/v1/actors', v1ActorRoutes);
 app.use('/api/v1/escrow', v1EscrowRoutes);
+app.use('/api/v1/documents', v1DocumentRoutes);
+app.use('/api/v1/mocks', v1MockRoutes);
 
 // Backward-compatibility shims
 app.use('/auth', shimAuthRoutes);

@@ -993,3 +993,428 @@ You can find the exact deploy hook URL in your Render dashboard.
 | Auth returns 401 on deployed site | JWT secret mismatch | Ensure `JWT_SECRET` is the same value used during seed data creation |
 | 3rd party confirm blocked | Escrow not in Funds-Held | Run deposit endpoint first (`PATCH /deals/:id/deposit`)
 
+
+---
+
+# Round 2: Phase 3 & Phase 4 Test Guide
+
+**What changed:** Phase 3 dropped the prototype 6 tables (`users`, `posts`, `hubs`, `deals`, `network_members`) and replaced them with 7 enterprise tables (`actors`, `transactions`, `escrow`, `loans`, `insurance_policies`, `training_records`, `activity_log`). Phase 4 rewrote the entire backend API against the new schema, added the v1 enterprise routes (`/api/v1/*`), the dual POD confirm, the NDPC consent middleware, and backward-compatibility shims for the legacy frontend.
+
+**Prerequisites:** Local Docker PostgreSQL running with the Phase 3 schema and seed data already applied (run `bash scripts/apply-phase-3.sh local` if starting from a clean state).
+
+```bash
+# Ensure the backend is running with local DB config
+cd backend
+npm install
+npm start
+
+# In another terminal, verify it started
+curl http://localhost:4000/health
+# Expected: {"status":"ok","database_time":"..."}
+```
+
+---
+
+## Section 1: Database Schema Verification (Phase 3)
+
+### 1a. Verify 7 Enterprise Tables Exist
+
+```bash
+docker exec -i agritech-bdsp-postgres \
+  psql -U agritech -d agritech_bdsp -c \
+  "SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE';"
+```
+
+**Expected output (7 tables):**
+```
+actors, transactions, escrow, loans, insurance_policies, training_records, activity_log
+```
+
+### 1b. Verify Seed Data — All 9 Actor Types
+
+```bash
+docker exec -i agritech-bdsp-postgres \
+  psql -U agritech -d agritech_bdsp -c \
+  "SELECT actor_type, count(*) FROM actors GROUP BY actor_type ORDER BY actor_type;"
+```
+
+**Expected:** 1 V4V_ADMIN, 1 AGRA, 2 BDSP, 2 INVESTOR, 2 KBS, 3 AGGREGATOR, 3 INPUT_VENDOR, 3 LOGISTICS, 8 SHF
+
+### 1c. Verify BDSP Network (Self-Referencing FK)
+
+```bash
+docker exec -i agritech-bdsp-postgres \
+  psql -U agritech -d agritech_bdsp -c \
+  "SELECT a1.actor_id AS shf, a1.full_name, a2.actor_id AS bdsp_id, a2.full_name AS bdsp_name
+   FROM actors a1 JOIN actors a2 ON a1.bdsp_id = a2.actor_id ORDER BY a1.actor_id;"
+```
+
+**Expected:** 4 SHFs under Amina Yusuf (BDSP 1), 4 SHFs under Musa Danjuma (BDSP 2)
+
+### 1d. Verify Computed Columns on Transactions
+
+```bash
+docker exec -i agritech-bdsp-postgres \
+  psql -U agritech -d agritech_bdsp -c \
+  "SELECT tx_id, commodity, quantity_kg, unit_price, total_amount, escrow_required, commission_v4v, commission_bdsp FROM transactions LIMIT 3;"
+```
+
+**Expected:** `total_amount` = `quantity_kg × unit_price`, `escrow_required` = `true` (all seed txs exceed $50), `commission_v4v` and `commission_bdsp` populated non-null.
+
+### 1e. Verify Activity Log
+
+```bash
+docker exec -i agritech-bdsp-postgres \
+  psql -U agritech -d agritech_bdsp -c \
+  "SELECT * FROM activity_log ORDER BY log_id;"
+```
+
+**Expected:** 5 seed audit entries.
+
+### 1f. Verify Indexes Created
+
+```bash
+docker exec -i agritech-bdsp-postgres \
+  psql -U agritech -d agritech_bdsp -c \
+  "SELECT indexname FROM pg_indexes WHERE tablename IN ('actors','transactions','escrow','loans','insurance_policies','training_records','activity_log') AND schemaname='public' ORDER BY tablename, indexname;" | grep idx_
+```
+
+**Expected:** At minimum `idx_actors_type_state`, `idx_actors_phone`, `idx_transactions_status`, `idx_training_actor_course`, `idx_activity_actor_time`.
+
+### 1g. Verify Old Tables Are Dropped
+
+```bash
+docker exec -i agritech-bdsp-postgres \
+  psql -U agritech -d agritech_bdsp -c \
+  "\dt"
+```
+
+**Expected:** Only the 7 new tables. No `users`, `posts`, `hubs`, `deals`, `network_members`.
+
+---
+
+## Section 2: v1 Enterprise API Verification (Phase 4)
+
+### 2a. Register a New Actor (with NDPC Consent)
+
+```bash
+curl -s -X POST http://localhost:4000/api/v1/auth/register \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "phone":"+2348000000001",
+    "password":"mypassword",
+    "full_name":"Round 2 Tester",
+    "actor_type":"SHF",
+    "bank_name":"GTBank",
+    "account_number":"1234567890",
+    "gender":"MALE",
+    "lga":"Chikun",
+    "ndpc_consent":true
+  }' | python3 -m json.tool
+```
+
+**Expected:** 201 response with `token` and `user` object containing `actor_id`, `phone`, `actor_type`, `kyc_status: "PENDING"`.
+
+### 2b. NDPC Consent Rejection
+
+```bash
+curl -s -X POST http://localhost:4000/api/v1/auth/register \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "phone":"+2348000000002",
+    "password":"mypassword",
+    "full_name":"No Consent Tester",
+    "actor_type":"SHF",
+    "bank_name":"GTBank",
+    "account_number":"1111111111",
+    "gender":"MALE",
+    "lga":"Chikun"
+  }' | python3 -m json.tool
+```
+
+**Expected:** 400 response: `{"error":"NDPC data privacy consent required"}`
+
+### 2c. Login with Password
+
+```bash
+curl -s -X POST http://localhost:4000/api/v1/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"phone":"+2348000000001","password":"mypassword"}' | python3 -m json.tool
+```
+
+**Expected:** 200 response with JWT token and user object. **Note the token for subsequent tests.**
+
+### 2d. Mock OTP Flow
+
+```bash
+# Step 1: Send OTP
+curl -s -X POST http://localhost:4000/api/v1/auth/send-otp \
+  -H 'Content-Type: application/json' \
+  -d '{"phone":"+2348000000003"}'
+# Expected: {"success":true,"message":"OTP sent (check server logs)"}
+# Note: the OTP code prints in the backend terminal logs
+
+# Step 2: Verify OTP (replace 123456 with actual code from logs)
+curl -s -X POST http://localhost:4000/api/v1/auth/verify-otp \
+  -H 'Content-Type: application/json' \
+  -d '{"phone":"+2348000000003","code":"976996"}'
+# Expected: {"tempToken":"eyJ...","message":"OTP verified. Use tempToken in /register."}
+```
+
+### 2e. Create Transaction (with Auto-Escrow)
+
+Save the token from 2c as `TOKEN`:
+
+```bash
+TOKEN="<token from 2c>"
+
+curl -s -X POST http://localhost:4000/api/v1/transactions \
+  -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "buyer_id":3,
+    "seller_id":5,
+    "logistics_id":18,
+    "commodity":"Rice",
+    "quantity_kg":100,
+    "unit_price":600
+  }' | python3 -m json.tool
+```
+
+**Verify:**
+- `status` = `"IN_ESCROW"` (auto-funded because `escrow_required = true`)
+- `escrow_required` = `true`
+- `total_amount` = `60000.00` (100 × 600)
+- `commission_v4v` = `840.00` (60000 × 0.02 × 0.70)
+- `commission_bdsp` = `360.00` (60000 × 0.02 × 0.30)
+- Note the `tx_id` for the next test
+
+### 2f. Dual POD Confirm — Complete Lifecycle
+
+```bash
+# Login as logistics partner (actor 18 = Sarah John, password: password123)
+LOG_TOKEN=$(curl -s -X POST http://localhost:4000/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"phone":"+2348100000018","password":"password123"}' | \
+  python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
+
+# Login as buyer (actor 3 = Fatima Abubakar, password: password123)
+BUYER_TOKEN=$(curl -s -X POST http://localhost:4000/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"phone":"+2348100000003","password":"password123"}' | \
+  python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
+
+# Replace TX_ID with the tx_id from 2e
+TX_ID=11
+
+# Step 1: Trucker confirms POD
+echo "=== Trucker POD ==="
+curl -s -X POST "http://localhost:4000/api/v1/transactions/$TX_ID/confirm-pod" \
+  -H "Authorization: Bearer $LOG_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"role":"trucker"}' | python3 -c "
+import sys,json; d=json.load(sys.stdin); t=d.get('transaction',{})
+print(f'Trucker={t.get(\"trucker_pod_confirmed\")}, Status={t.get(\"status\")}, Buyer={t.get(\"buyer_pod_confirmed\")}')"
+
+# Step 2: Buyer confirms POD (should auto-release escrow)
+echo "=== Buyer POD (triggers release) ==="
+curl -s -X POST "http://localhost:4000/api/v1/transactions/$TX_ID/confirm-pod" \
+  -H "Authorization: Bearer $BUYER_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"role":"buyer"}' | python3 -c "
+import sys,json; d=json.load(sys.stdin); t=d.get('transaction',{})
+print(f'Trucker={t.get(\"trucker_pod_confirmed\")}, Buyer={t.get(\"buyer_pod_confirmed\")}, Status={t.get(\"status\")}')"
+
+# Step 3: Verify escrow released and seller credited
+echo "=== Escrow Status ==="
+docker exec -i agritech-bdsp-postgres \
+  psql -U agritech -d agritech_bdsp -c \
+  "SELECT escrow_id, tx_id, status, released_at FROM escrow WHERE tx_id=$TX_ID;"
+
+echo "=== Seller Wallet (actor 5 = Ngozi Okonkwo) ==="
+docker exec -i agritech-bdsp-postgres \
+  psql -U agritech -d agritech_bdsp -c \
+  "SELECT actor_id, full_name, wallet_balance FROM actors WHERE actor_id=5;"
+```
+
+**Expected progression:** `IN_ESCROW` → trucker confirms → `DISPATCHED` → buyer confirms → `COMPLETED`. Seller wallet increases by the escrow amount.
+
+### 2g. List My Transactions
+
+```bash
+curl -s http://localhost:4000/api/v1/transactions \
+  -H "Authorization: Bearer $TOKEN" | python3 -c "
+import sys,json; d=json.load(sys.stdin); txns=d.get('transactions',[])
+print(f'{len(txns)} transactions')
+for t in txns[:3]:
+    print(f'  Tx {t[\"tx_id\"]}: {t[\"commodity\"]} {t[\"quantity_kg\"]}kg, {t[\"status\"]}, ₦{t[\"total_amount\"]}')"
+```
+
+### 2h. BDSP Network View
+
+```bash
+# Login as a BDSP (Amina Yusuf, password: password123)
+BDSP_TOKEN=$(curl -s -X POST http://localhost:4000/api/v1/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"phone":"+2348100000001","password":"password123"}' | \
+  python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
+
+curl -s http://localhost:4000/api/v1/actors/network \
+  -H "Authorization: Bearer $BDSP_TOKEN" | python3 -c "
+import sys,json; d=json.load(sys.stdin); m=d.get('metrics',{}); cl=m.get('commission_ledger',{})
+print(f'Members: {m.get(\"member_count\")}')
+print(f'Gender: {m.get(\"gender_counts\")}')
+print(f'Tx count: {cl.get(\"tx_count\")}')
+print(f'Total value: ₦{cl.get(\"total_tx_value\")}')
+print(f'V4V rev: ₦{cl.get(\"total_commission_v4v\")}')
+print(f'BDSP com: ₦{cl.get(\"total_commission_bdsp\")}')"
+```
+
+### 2i. Manual Escrow Override (V4V Admin)
+
+```bash
+# Login as V4V_ADMIN (password: password123)
+ADMIN_TOKEN=$(curl -s -X POST http://localhost:4000/api/v1/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"phone":"+2348100000099","password":"password123"}' | \
+  python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
+
+# Create a tx first, then manually fund escrow
+curl -s -X POST http://localhost:4000/api/v1/transactions \
+  -H "Authorization: Bearer $BDSP_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"buyer_id":3,"seller_id":5,"logistics_id":17,"commodity":"Test","quantity_kg":10,"unit_price":100}' | \
+  python3 -c "import sys,json; print(f'Created tx {json.load(sys.stdin)[\"transaction\"][\"tx_id\"]}')"
+
+# Get the escrow ID
+docker exec -i agritech-bdsp-postgres \
+  psql -U agritech -d agritech_bdsp -c \
+  "SELECT escrow_id, tx_id FROM escrow ORDER BY escrow_id DESC LIMIT 1;"
+
+# Release manually (replace ESCROW_ID)
+curl -s -X PATCH "http://localhost:4000/api/v1/escrow/5/release" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | python3 -m json.tool
+```
+
+**Expected:** Escrow transitions to `RELEASED_TO_SELLER`, seller wallet credited.
+
+---
+
+## Section 3: Legacy Shim Verification (Frontend Compatibility)
+
+### 3a. Legacy Login (Frontend Uses This)
+
+```bash
+curl -s -X POST http://localhost:4000/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"phone":"+2348100000001","password":"password123"}' | python3 -m json.tool
+```
+
+**Expected:** Legacy user shape with `user_id: "ACT_001"`, `is_bdsp: true`, `primary_role: "BDSP"`.
+
+### 3b. Legacy Posts (Marketplace)
+
+```bash
+curl -s http://localhost:4000/posts | python3 -c "
+import sys,json; d=json.load(sys.stdin); posts=d.get('posts',[])
+print(f'{len(posts)} marketplace posts')
+for p in posts[:5]:
+    print(f'  {p[\"post_id\"]}: {p[\"item_name\"]} - {p[\"post_type\"]} by {p[\"posted_by\"]}')"
+```
+
+**Expected:** Active transactions mapped to post shape, 8+ posts visible.
+
+### 3c. Legacy Deals
+
+```bash
+TOKEN=$(curl -s -X POST http://localhost:4000/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"phone":"+2348100000001","password":"password123"}' | \
+  python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
+
+# BDSP's deals (deals where seller's bdsp_id matches)
+curl -s http://localhost:4000/deals \
+  -H "Authorization: Bearer $TOKEN" | python3 -c "
+import sys,json; d=json.load(sys.stdin); deals=d.get('deals',[])
+print(f'{len(deals)} BDSP deals')
+for dl in deals[:5]:
+    print(f'  {dl[\"deal_id\"]}: {dl[\"item_name\"]}, escrow={dl[\"escrow_status\"]}, ₦{dl[\"deal_value\"]}')"
+
+# Participant's deals
+curl -s http://localhost:4000/deals/my \
+  -H "Authorization: Bearer $TOKEN" | python3 -c "
+import sys,json; d=json.load(sys.stdin); deals=d.get('deals',[])
+print(f'{len(deals)} participant deals')
+for dl in deals[:3]:
+    print(f'  {dl[\"deal_id\"]}: {dl[\"item_name\"]}, escrow={dl[\"escrow_status\"]}')"
+```
+
+### 3d. Legacy BDSP Network
+
+```bash
+curl -s http://localhost:4000/bdsp/network \
+  -H "Authorization: Bearer $TOKEN" | python3 -c "
+import sys,json; d=json.load(sys.stdin); m=d.get('metrics',{}); cl=m.get('commission_ledger',{})
+print(f'Members: {m.get(\"member_count\")}')
+print(f'Gender: {m.get(\"gender_counts\")}')
+print(f'Deal count: {cl.get(\"deal_count\")}')
+print(f'Total value: ₦{cl.get(\"total_deal_value\")}')
+print(f'V4V rev: ₦{cl.get(\"total_v4v_revenue\")}')
+print(f'BDSP com: ₦{cl.get(\"total_bdsp_commission\")}')"
+```
+
+---
+
+## Section 4: Activity Log (NITDA Audit Trail)
+
+### 4a. Verify All Write Operations Logged
+
+```bash
+docker exec -i agritech-bdsp-postgres \
+  psql -U agritech -d agritech_bdsp -c \
+  "SELECT log_id, action FROM activity_log ORDER BY log_id;"
+```
+
+**Expected:** Every registration, transaction creation, POD confirmation, and escrow operation generates a descriptive audit entry.
+
+---
+
+## Section 5: Quick Smoke Test (All-in-One)
+
+Run this single command to verify everything works end-to-end after a fresh deployment:
+
+```bash
+echo "=== SMOKE TEST ===" && \
+echo -n "Health: " && curl -sf http://localhost:4000/health | python3 -c "import sys,json; print(json.load(sys.stdin)['status'])" && \
+echo -n "Register: " && R=$(curl -sf -X POST http://localhost:4000/api/v1/auth/register -H 'Content-Type: application/json' -d '{"phone":"+2348000099999","password":"test1234","full_name":"Smoke Test","actor_type":"SHF","bank_name":"GTBank","account_number":"9999999999","gender":"MALE","lga":"Chikun","ndpc_consent":true}') && echo "$R" | python3 -c "import sys,json; print(f'OK actor {json.load(sys.stdin)[\"user\"][\"actor_id\"]}')" && \
+echo -n "Login: " && T=$(curl -sf -X POST http://localhost:4000/api/v1/auth/login -H 'Content-Type: application/json' -d '{"phone":"+2348000099999","password":"test1234"}') && echo "$T" | python3 -c "import sys,json; print(f'OK token={json.load(sys.stdin)[\"token\"][:20]}...')" && \
+echo -n "Legacy Login: " && curl -sf -X POST http://localhost:4000/auth/login -H 'Content-Type: application/json' -d '{"phone":"+2348100000001","password":"password123"}' | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'OK {d[\"user\"][\"full_name\"]} is_bdsp={d[\"user\"][\"is_bdsp\"]}')" && \
+echo -n "Posts: " && curl -sf http://localhost:4000/posts | python3 -c "import sys,json; print(f'{len(json.load(sys.stdin)[\"posts\"])} active')" && \
+echo -n "BDSP Network: " && BT=$(curl -sf -X POST http://localhost:4000/auth/login -H 'Content-Type: application/json' -d '{"phone":"+2348100000001","password":"password123"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])") && curl -sf http://localhost:4000/bdsp/network -H "Authorization: Bearer $BT" | python3 -c "import sys,json; d=json.load(sys.stdin); m=d['metrics']; print(f'{m[\"member_count\"]} members, ₦{m[\"commission_ledger\"][\"total_deal_value\"]} value')" && \
+echo -n "Deals: " && curl -sf http://localhost:4000/deals/my -H "Authorization: Bearer $BT" | python3 -c "import sys,json; print(f'{len(json.load(sys.stdin)[\"deals\"])} deals')" && \
+echo -n "Activity Log: " && docker exec -i agritech-bdsp-postgres psql -U agritech -d agritech_bdsp -tA -c "SELECT count(*) FROM activity_log;" && \
+echo "=== ALL CHECKS PASSED ==="
+```
+
+---
+
+## Expected Results Summary
+
+| Test | Expected Result | Phase |
+|------|----------------|-------|
+| 7 tables exist | actors, transactions, escrow, loans, insurance_policies, training_records, activity_log | 3 |
+| 9 actor roles seeded | 25 actors, all 9 types present | 3 |
+| Computed columns | total_amount = qty × price, escrow_required = true for >$50 | 3 |
+| Commission trigger | commission_v4v ≈ total × 0.014, commission_bdsp ≈ total × 0.006 | 3 |
+| Indexes | 15 indexes on FKs, status, composite lookups | 3 |
+| Register with consent | 201 + token + user created | 4 |
+| Register without consent | 400 NDPC error | 4 |
+| Transaction + auto-escrow | Created IN_ESCROW, escrow record populated | 4 |
+| Dual POD lifecycle | IN_ESCROW → DISPATCHED → COMPLETED, seller credited | 4 |
+| BDSP network | 4 members, commission ledger, gender counts | 4 |
+| V4V admin override | Manual escrow release/refund | 4 |
+| Legacy shim login | user_id="ACT_001", is_bdsp=true | 4 |
+| Legacy shim deals | Deals array with old shape | 4 |
+| Legacy shim posts | Active marketplace posts from transactions | 4 |
+| Activity log | Every write operation recorded | 4 |
+
