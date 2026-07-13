@@ -1418,3 +1418,153 @@ echo "=== ALL CHECKS PASSED ==="
 | Legacy shim posts | Active marketplace posts from transactions | 4 |
 | Activity log | Every write operation recorded | 4 |
 
+
+
+---
+
+# Round 2 (cont.): Phase 5 Document Engine & Partner Mock Test Guide
+
+## Section 6: Document Generation
+
+### 6a. Generate Escrow Voucher PDF
+
+```bash
+TOKEN=$(curl -s -X POST http://localhost:4000/api/v1/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"phone":"+2348100000001","password":"password123"}' | \
+  python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
+
+curl -s -X POST http://localhost:4000/api/v1/documents/escrow-voucher/1 \
+  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
+```
+
+**Expected:** `{"path":".../escrow-voucher-TXN_001.pdf","message":"Escrow voucher generated"}`
+
+### 6b. Download Escrow Voucher PDF
+
+```bash
+curl -s -o /dev/null -w "HTTP %{http_code}, Type: %{content_type}, Size: %{size_download}b\n" \
+  http://localhost:4000/api/v1/documents/escrow-voucher/1/download \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Expected:** `HTTP 200, Type: application/pdf, Size: 2xxxb`
+
+### 6c. Verify PDF Content
+
+```bash
+file backend/pdfs/escrow-voucher-TXN_001.pdf
+```
+**Expected:** `PDF document, version 1.4`
+
+### 6d. Generate Insurance Certificate PDF
+
+```bash
+curl -s -X POST http://localhost:4000/api/v1/documents/insurance-cert/1 \
+  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
+```
+
+**Expected:** `{"path":".../insurance-cert-POL_001.pdf","message":"Insurance certificate generated"}`
+
+### 6e. Download Insurance Certificate PDF
+
+```bash
+curl -s -o /dev/null -w "HTTP %{http_code}, Type: %{content_type}, Size: %{size_download}b\n" \
+  http://localhost:4000/api/v1/documents/insurance-cert/1/download \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Expected:** `HTTP 200, Type: application/pdf, Size: 2xxxb`
+
+## Section 7: Partner Mock Endpoints
+
+### 7a. Mock Insurance Quote (NAIC)
+
+```bash
+curl -s -X POST http://localhost:4000/api/v1/mocks/insurance/quote \
+  -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"policy_type":"CROP","sum_insured":500000}' | python3 -m json.tool
+```
+
+**Expected:** NAIC quote with premium ≈ 12,500 (2.5% of sum) for CROP, or AXA if specified.
+
+### 7b. Mock Insurance Quote (AXA)
+
+```bash
+curl -s -X POST http://localhost:4000/api/v1/mocks/insurance/quote \
+  -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"policy_type":"LIVESTOCK","sum_insured":800000,"provider":"AXA"}' | python3 -m json.tool
+```
+
+**Expected:** AXA quote with provider="AXA", premium ≈ 25,600 (3.2% of sum).
+
+### 7c. Mock Bank Loan Approval
+
+```bash
+curl -s -X POST http://localhost:4000/api/v1/mocks/bank/loan-approval \
+  -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"actor_id":1,"amount":500000,"credit_score":72}' | python3 -m json.tool
+```
+
+**Expected:** approved: true, interest_rate ≈ 12%, monthly_repayment calculated.
+
+### 7d. Mock Bank Loan Decline (Low Credit)
+
+```bash
+curl -s -X POST http://localhost:4000/api/v1/mocks/bank/loan-approval \
+  -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"actor_id":10,"amount":500000,"credit_score":30}' | python3 -m json.tool
+```
+
+**Expected:** approved: false, message includes "declined".
+
+### 7e. Mock Bank Payout
+
+```bash
+curl -s -X POST http://localhost:4000/api/v1/mocks/bank/payout \
+  -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"account_number":"0012345678","amount":50000,"bank_name":"GTBank"}' | python3 -m json.tool
+```
+
+**Expected:** success: true, reference starts with PAYOUT-, settlement_date is tomorrow.
+
+### 7f. Mock Insurance Claim (Approved)
+
+```bash
+curl -s -X POST http://localhost:4000/api/v1/mocks/insurance/claim \
+  -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"policy_id":1,"claim_amount":100000,"sum_insured":600000}' | python3 -m json.tool
+```
+
+**Expected:** approved: true, status: "APPROVED", payout = claim_amount.
+
+### 7g. Mock Insurance Claim (Exceeds Limit)
+
+```bash
+curl -s -X POST http://localhost:4000/api/v1/mocks/insurance/claim \
+  -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"policy_id":1,"claim_amount":600000,"sum_insured":600000}' | python3 -m json.tool
+```
+
+**Expected:** approved: false, status: "REJECTED", message mentions exceeds max payout.
+
+## Expected Results Summary
+
+| Test | Expected Result | Phase |
+|------|----------------|-------|
+| Escrow voucher PDF | Generated file on disk, downloadable as PDF | 5 |
+| Insurance certificate PDF | Generated file on disk, downloadable as PDF | 5 |
+| Mock NAIC quote | Premium ≈ 2.5% of sum insured | 5 |
+| Mock AXA quote | Premium ≈ 3.2% of sum insured | 5 |
+| Loan approval (good credit) | approved: true, rate ≈ 12% | 5 |
+| Loan decline (bad credit) | approved: false | 5 |
+| Bank payout | success: true, reference returned | 5 |
+| Claim approved | status: APPROVED | 5 |
+| Claim exceeds limit | status: REJECTED | 5 |
