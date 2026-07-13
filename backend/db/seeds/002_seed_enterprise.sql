@@ -54,13 +54,13 @@ VALUES
    'REJECTED', 'MALE',   2,       5000.00),
 
   -- AGGREGATOR (3) — Bulk commodity buyers
-  (11, 'AGGREGATOR', 'Emeka Okafor',   '+2348100000011', NULL, 'WEB',
+  (11, 'AGGREGATOR', 'Emeka Okafor',   '+2348100000011', '$2b$12$V9WW4S1/fjq4SBy4UbFC3OrKEyxKmJiS1v1Q7Mo/Y.OhPq4ZoVIYC', 'WEB',
    'GTBank',    '0112233445', 'Kaduna', 'Chikun',  10.53000000, 7.35000000,
    'VERIFIED', 'MALE',   NULL,   500000.00),
-  (12, 'AGGREGATOR', 'Bola Adewale',   '+2348100000012', NULL, 'WEB',
+  (12, 'AGGREGATOR', 'Bola Adewale',   '+2348100000012', '$2b$12$V9WW4S1/fjq4SBy4UbFC3OrKEyxKmJiS1v1Q7Mo/Y.OhPq4ZoVIYC', 'WEB',
    'Zenith',    '0112233446', 'Kaduna', 'Chikun',  10.53500000, 7.35500000,
    'VERIFIED', 'FEMALE', NULL,   750000.00),
-  (13, 'AGGREGATOR', 'Sani Bello',     '+2348100000013', NULL, 'WHATSAPP',
+  (13, 'AGGREGATOR', 'Sani Bello',     '+2348100000013', '$2b$12$V9WW4S1/fjq4SBy4UbFC3OrKEyxKmJiS1v1Q7Mo/Y.OhPq4ZoVIYC', 'WHATSAPP',
    'UBA',       '0112233447', 'Kaduna', 'Chikun',  10.52800000, 7.34800000,
    'VERIFIED', 'MALE',   NULL,   320000.00),
 
@@ -71,7 +71,7 @@ VALUES
   (15, 'INPUT_VENDOR', 'Grace Okonkwo',  '+2348100000015', '$2b$12$V9WW4S1/fjq4SBy4UbFC3OrKEyxKmJiS1v1Q7Mo/Y.OhPq4ZoVIYC', 'WHATSAPP',
    'Access',    '0223344557', 'Kaduna', 'Chikun',  10.49500000, 7.38500000,
    'VERIFIED', 'FEMALE', NULL,   180000.00),
-  (16, 'INPUT_VENDOR', 'Tunde Balogun',  '+2348100000016', NULL, 'USSD',
+  (16, 'INPUT_VENDOR', 'Tunde Balogun',  '+2348100000016', '$2b$12$V9WW4S1/fjq4SBy4UbFC3OrKEyxKmJiS1v1Q7Mo/Y.OhPq4ZoVIYC', 'USSD',
    'GTBank',    '0223344558', 'Kaduna', 'Chikun',  10.48500000, 7.37500000,
    'PENDING',  'MALE',   NULL,    45000.00),
 
@@ -82,7 +82,7 @@ VALUES
   (18, 'LOGISTICS', 'Sarah John',      '+2348100000018', '$2b$12$V9WW4S1/fjq4SBy4UbFC3OrKEyxKmJiS1v1Q7Mo/Y.OhPq4ZoVIYC', 'WEB',
    'UBA',       '0334455668', 'Kaduna', 'Chikun',  10.50000000, 7.39500000,
    'VERIFIED', 'FEMALE', NULL,    52000.00),
-  (19, 'LOGISTICS', 'Yakubu Musa',     '+2348100000019', NULL, 'USSD',
+  (19, 'LOGISTICS', 'Yakubu Musa',     '+2348100000019', '$2b$12$V9WW4S1/fjq4SBy4UbFC3OrKEyxKmJiS1v1Q7Mo/Y.OhPq4ZoVIYC', 'USSD',
    'First Bank','0334455669', 'Kaduna', 'Chikun',  10.51000000, 7.40500000,
    'PENDING',  'MALE',   NULL,    18000.00),
 
@@ -95,15 +95,15 @@ VALUES
    'VERIFIED', 'FEMALE', NULL,   480000.00),
 
   -- AGRA (1) — Strategic agricultural partner
-  (22, 'AGRA', 'Chinedu Agu',      '+2348100000022', NULL, 'WEB',
+  (22, 'AGRA', 'Chinedu Agu',      '+2348100000022', '$2b$12$V9WW4S1/fjq4SBy4UbFC3OrKEyxKmJiS1v1Q7Mo/Y.OhPq4ZoVIYC', 'WEB',
    'Zenith',    '0556677880', 'Kaduna', 'Chikun',  10.55000000, 7.37000000,
    'VERIFIED', 'MALE',   NULL,   1000000.00),
 
   -- INVESTOR (2) — Capital providers
-  (23, 'INVESTOR', 'Alhaji Shehu Idris','+2348100000023', NULL, 'WEB',
+  (23, 'INVESTOR', 'Alhaji Shehu Idris','+2348100000023', '$2b$12$V9WW4S1/fjq4SBy4UbFC3OrKEyxKmJiS1v1Q7Mo/Y.OhPq4ZoVIYC', 'WEB',
    'First Bank','0667788991', 'Kaduna', 'Chikun',  10.55500000, 7.37500000,
    'VERIFIED', 'MALE',   NULL,   2500000.00),
-  (24, 'INVESTOR', 'Dr. Folashade Adeleke','+2348100000024', NULL, 'WEB',
+  (24, 'INVESTOR', 'Dr. Folashade Adeleke','+2348100000024', '$2b$12$V9WW4S1/fjq4SBy4UbFC3OrKEyxKmJiS1v1Q7Mo/Y.OhPq4ZoVIYC', 'WEB',
    'UBA',       '0667788992', 'Kaduna', 'Chikun',  10.56000000, 7.38000000,
    'VERIFIED', 'FEMALE', NULL,   3000000.00),
 

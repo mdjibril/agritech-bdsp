@@ -118,7 +118,7 @@ function Login({ onLogin, onRegister }) {
           </button>
           <button type="button" className="text-button" onClick={onRegister}>Create new account</button>
           <p className="demo-note">
-            Demo: BDSP (+2348100000001) · Buyer (+2348100000004) · Logistics (+2348100000005) · Seller (+2348100000003)
+            Demo: BDSP (+2348100000001) · Aggregator (+2348100000011) · Logistics (+2348100000017) · Farmer SHF (+2348100000003)
           </p>
         </form>
       </section>
