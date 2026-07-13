@@ -119,7 +119,7 @@
 
 - [x] **Task 3.2:** Configured performance indexes on `actors(actor_type, state)`, `transactions(status)`, `training_records(actor_id, course_name)`, plus 11 additional indexes on FKs and status columns across all tables.
 - [x] **Task 3.3:** Injected 25 seed actors across all 9 roles with realistic Nigerian names, bank details, and BDSP network relationships, plus 10 transactions covering all lifecycle statuses, 2 escrow records, 2 loans, 2 insurance policies, 3 training records, and 5 audit log entries.
-- [ ] **Task 3.4 (Git Workflow):** Commit changes, push to remote, and merge `feature/phase-3-postgres-migration` back to `main`.
+- [x] **Task 3.4 (Git Workflow):** Committed, pushed to remote, and merged `feature/phase-3-postgres-migration` back to `main`.
   `git add . && git commit -m "Phase 3 complete: Upgraded 6-table Postgres schema"`
   `git checkout main && git merge feature/phase-3-postgres-migration`
 
