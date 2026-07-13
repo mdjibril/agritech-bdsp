@@ -1,5 +1,3 @@
-const path = require('path');
-const fs = require('fs');
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -62,22 +60,7 @@ app.use('/bdsp', shimBdspRoutes);
 // WhatsApp webhook (keep working)
 app.use('/whatsapp', whatsappRoutes);
 
-// Serve built frontend in production (Docker: /app/dist,  local: frontend/dist)
-const distCandidates = [
-  path.join(__dirname, '../dist'),        // Docker image
-  path.join(__dirname, '../../frontend/dist'), // local dev from backend/
-];
-const frontendDist = distCandidates.find(p => fs.existsSync(path.join(p, 'index.html')));
-
-if (frontendDist) {
-  app.use(express.static(frontendDist));
-  // SPA fallback: unmatched GET *after* API routes serves the React app
-  app.get('*', (_req, res) => {
-    res.sendFile(path.join(frontendDist, 'index.html'));
-  });
-}
-
-// Remainder 404 catch-all
+// 404 catch-all
 app.use((_req, _res, next) => {
   next(new HttpError(404, 'Route not found'));
 });
