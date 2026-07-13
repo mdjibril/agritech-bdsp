@@ -918,7 +918,8 @@ The seed script completed successfully and populated the `users`, `network_membe
    - **Root Directory**: `frontend`
    - **Build Command**: `npm install && npm run build`
    - **Publish Directory**: `dist`
-3. Set environment variable: `VITE_API_URL=https://your-backend.onrender.com`
+   - **SPA Redirects**: ensure the app serves `index.html` for deep links (Render static site requires a rewrite rule such as `/* /index.html 200`)
+3. Set environment variable: `VITE_API_URL=https://agritech-bdsp-back.onrender.com`
 4. Deploy
 
 ### 17e. Verify deployment
@@ -947,4 +948,48 @@ And the login endpoint returned a valid auth payload after the schema and seed d
 ### Dockerfile
 
 A `Dockerfile` exists at `backend/Dockerfile` if you prefer container-based deployment instead of Render's buildpack system. It uses `node:20-alpine` and runs `npm ci --only=production`.
+
+### 17f. Post-deployment verification checklist
+
+- [ ] `curl https://your-app.onrender.com/health` returns `{"status":"ok","database_time":"..."}`
+- [ ] Login works: `curl -X POST ... /auth/login` returns a user + token
+- [ ] Marketplace returns posts: `curl ... /posts?status=Active`
+- [ ] Frontend loads at `https://your-frontend.onrender.com` with no console errors
+- [ ] Marketplace grid loads and filters work (type, category, LGA)
+- [ ] Login redirects to role-appropriate dashboard
+- [ ] BDSP dashboard shows network metrics and commission ledger
+
+### 17g. CI/CD — Automated deploy with GitHub Actions
+
+A GitHub Actions workflow is configured at `.github/workflows/deploy.yml`. It triggers on every push to the `main` branch:
+
+1. **Checkout** — pulls the latest code
+2. **Notify Render** — sends a POST to Render's Deploy Hook URL, triggering a fresh build and deploy of the backend web service
+
+**To enable the workflow:**
+
+1. Go to your **Render Dashboard** → **Web Service** (backend) → **Settings** → **Deploy Hooks**
+2. Click **Generate Deploy Hook** and copy the URL
+3. Go to your **GitHub repo** → **Settings** → **Secrets and variables** → **Actions**
+4. Add a new repository secret named `RENDER_DEPLOY_HOOK_URL` with the copied URL
+5. Push to `main` — the workflow runs automatically
+
+**Optional: Manual deploy via curl**
+
+```bash
+curl -X POST https://api.render.com/deploy/srv-xxx?key=yyy
+```
+
+You can find the exact deploy hook URL in your Render dashboard.
+
+### 17h. Troubleshooting
+
+| Symptom | Likely cause | Fix |
+|---------|-------------|-----|
+| Backend health check fails (502) | Missing env vars | Check `DATABASE_URL`, `JWT_SECRET` are set in Render dashboard |
+| DB connection timeout | Render PostgreSQL not provisioned | Create a Postgres DB in Render and copy the connection string |
+| `Cannot read properties of null` | Missing seed data | SSH into Render shell or run `psql` to apply migrations + seeds |
+| Frontend blank page | API URL mismatch | Verify `VITE_API_URL` in Render static site env matches backend URL |
+| Auth returns 401 on deployed site | JWT secret mismatch | Ensure `JWT_SECRET` is the same value used during seed data creation |
+| 3rd party confirm blocked | Escrow not in Funds-Held | Run deposit endpoint first (`PATCH /deals/:id/deposit`)
 

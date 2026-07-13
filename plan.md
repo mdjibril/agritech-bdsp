@@ -1,168 +1,171 @@
-# VALUE-4-VALUE (V4V) Proof of Concept (POC) Plan
+# VALUE-4-VALUE (V4V) INCLUSIVE AGRICULTURAL DPI - MASTER DEVELOPMENT PLAN
 
 ## Executive Summary
-**Goal:** Build a 2-channel (Web + WhatsApp), 1-database platform to onboard 100 users in Chikun LGA.
-**Core Mechanics:** Role-based access (SHF, Buyer, Input Dealer, Logistics), BDSP badge logic, and a simulated 3-way Escrow transaction lifecycle.
-**Compliance:** NDPC Act 2023 consent capture and NITDA 2019 Audit Trails.
-**Field Target:** 100 Users in Chikun LGA (60 via KBS Students, 40 via 2 BDSPs. 50% Women baseline).
+**Goal:** Deploy an Inclusive Agricultural Digital Public Infrastructure (DPI) for Nigeria serving 9 distinct marketplace roles across 4 access channels (USSD, WhatsApp, Web, Mobile App) with 0% smartphone exclusion.
+**Target Baseline:** 100 Users in Chikun LGA (60 via KBS Students, 40 via 2 Certified BDSPs. 50% Women baseline).
+**Regulatory Mandates:** Local hosting (MySQL InnoDB, `utf8mb4_unicode_ci` in Nigeria region), NDPC Act 2023 data retention constraints, and automated NITDA 2019 audit logging.
 
 ---
 
-## Phase 1: Architecture & Database Initialization
-*Objective: Set up the foundational database schema and project repositories using the finalized 6-table relational structure.*
+## Phase 1: Local Prototype Schema Setup
+*Objective: Initialize baseline local repositories and relational tracking tables.*
 
-- [x] **Task 1.1:** Initialize Git repository and project structure (`/backend`, `/frontend`, `/whatsapp-bot`).
-- [x] **Task 1.2:** Provision a PostgreSQL database instance via local Docker Compose configuration.
-- [x] **Task 1.3:** Create database migration files mapping out the strict 6-table layout detailed below:
-
-### Table 1: `users`
-| Field Name | Type | Required | Options/Example | Notes |
-| :--- | :--- | :---: | :--- | :--- |
-| `user_id` | Text | Yes | `USR_001` | **PK**. Auto-generated: `USR_` + 3 digits |
-| `onboarded_by` | Dropdown | Yes | `KBS_Student`, `BDSP_01`, `Self` | Outlines onboarding agent track |
-| `full_name` | Text | Yes | Aisha Bello | User legal identity |
-| `phone` | Text | Yes | `+2348102529947` | **Unique**. Standard login identity ID |
-| `password_hash` | Text | Yes | - | Securely hashed auth credentials |
-| `primary_role` | Dropdown | Yes | `SHF`, `Buyer`, `Input Dealer`, `Logistics` | Primary operation type |
-| `secondary_roles`| Multi-select | No | `SHF`, `Buyer`, `Input Dealer`, `Logistics` | Handles multi-role matrix configuration |
-| `is_bdsp` | Boolean | Yes | `True`, `False` | Baseline default: `False` |
-| `bdsp_certified_by`| Text | No | `KBS` | Certifying institution string |
-| `gender` | Dropdown | Yes | `Male`, `Female` | Required KPI tracking for IFC metrics |
-| `lga` | Text | Yes | `Chikun` | Forced local baseline filter for POC |
-| `ward` | Text | No | `Rido` | Granular regional identity mapping |
-| `gps_lat` | Number | No | `10.5200` | Precision routing parameter |
-| `gps_lng` | Number | No | `7.3400` | Precision routing parameter |
-| `crops` | Multi-select | No | `Maize`, `Soybean` | Active market commodity index |
-| `livestock` | Multi-select | No | `Goats`, `Poultry`, `Piggery` | Active market livestock index |
-| `inputs_sold` | Multi-select | No | `NPK`, `Seed` | Operational input parameters |
-| `ndpc_consent` | Boolean | Yes | `True` | **NDPC Mandated** data compilation agreement |
-| `consent_timestamp`| DateTime | Yes | `2026-05-03 10:00` | Legal compliance timestamping |
-| `data_retention_until`| Date | Yes | `2028-05-03` | Automated window (Forced 2-year expiration) |
-| `created_at` | DateTime | Yes | `2026-05-01 10:00` | System auto-timestamp |
-
-### Table 2: `network_members`
-| Field Name | Type | Required | Example / Relation | Notes |
-| :--- | :--- | :---: | :--- | :--- |
-| `network_id` | Text | Yes | `NET_001` | **PK**. Unique entry index |
-| `bdsp_user_id` | Text | Yes | FK Relation: `users.user_id` | Identifies handling network manager |
-| `member_user_id`| Text | Yes | FK Relation: `users.user_id` | Downline user mapping reference |
-| `joined_at` | DateTime | Yes | `2026-05-03` | System timestamp tracking connection |
-
-### Table 3: `posts`
-| Field Name | Type | Required | Options/Example | Notes |
-| :--- | :--- | :---: | :--- | :--- |
-| `post_id` | Text | Yes | `PST_001` | **PK**. Unique listing indicator |
-| `user_id` | Text | Yes | FK Relation: `users.user_id` | Tracks owner of the listing entry |
-| `post_type` | Dropdown | Yes | `SELL`, `BUY` | Nature of transaction intent |
-| `category` | Dropdown | Yes | `Crop`, `Livestock`, `Input` | System categorization label |
-| `item_name` | Text | Yes | `Maize`, `NPK`, `Goats` | Plain text identifier |
-| `quantity` | Number | Yes | `23` | Quantitative volume entry |
-| `unit` | Dropdown | Yes | `MT`, `Bags`, `Heads` | Standardized payload volume measurement |
-| `price_per_unit` | Number | Yes | `480000` | Unit price value configuration |
-| `lga` | Text | Yes | `Chikun` | Operational boundary assignment |
-| `interested_count`| Number | No | `12` | Aggregated engagement counter metric |
-| `status` | Dropdown | Yes | `Active`, `Hub-Formed`, `Closed` | State management lifecycle tracking |
-
-### Table 4: `hubs`
-| Field Name | Type | Required | Options/Example | Notes |
-| :--- | :--- | :---: | :--- | :--- |
-| `hub_id` | Text | Yes | `CHK-C01` | **PK**. Aggregated cluster container index |
-| `formed_by_bdsp_id`| Text | Yes | FK Relation: `users.user_id` | Validates managing agent status validation |
-| `category` | Dropdown | Yes | `Crop`, `Livestock`, `Input` | Matches child entry categories |
-| `item_name` | Text | Yes | `Maize` | Name matching index |
-| `member_user_ids`| List of Text| Yes | `[USR_001, USR_002]` | Array listing aggregated supply nodes |
-| `logistics_user_id`| Text | No | FK Relation: `users.user_id` | Assigned transporter link |
-| `total_quantity` | Number | Yes | `23` | Summarized aggregate supply volume |
-| `status` | Dropdown | Yes | `Formed`, `Logistics-Assigned`, `Completed` | Cluster state engine tracking |
-
-### Table 5: `deals`
-| Field Name | Type | Required | Options/Example | Notes |
-| :--- | :--- | :---: | :--- | :--- |
-| `deal_id` | Text | Yes | `DL_001` | **PK**. Legal escrow transaction container |
-| `hub_id` | Text | Yes | FK Relation: `hubs.hub_id` | Maps back to consolidated hub entry |
-| `bdsp_user_id` | Text | Yes | FK Relation: `users.user_id` | Direct link to calculate the **30% commission** |
-| `buyer_user_id` | Text | Yes | FK Relation: `users.user_id` | Escrow structural engine buyer reference |
-| `seller_user_ids`| List of Text| Yes | `[USR_001]` | Array of destination downline suppliers |
-| `logistics_user_id`| Text | No | FK Relation: `users.user_id` | Logistics node payment extraction link |
-| `deal_value` | Number | Yes | `11040000` | Full contract currency value tracking |
-| `escrow_status` | Dropdown | Yes | `Funds-Held-Placeholder` | Live financial state execution indicator |
-| `insurance_status`| Dropdown | Yes | `Certificate-Issued-Placeholder`| Integrated partner contract placeholder |
-| `v4v_revenue` | Number | Yes | - | Auto-calculated calculation: **70% of revenue** |
-| `bdsp_commission`| Number | Yes | - | Auto-calculated calculation: **30% of revenue** |
-
-### Table 6: `activity_log`
-*Serves directly as the automated NITDA Compliance Audit Trail.*
-| Field Name | Type | Required | Example | Notes |
-| :--- | :--- | :---: | :--- | :--- |
-| `log_id` | Text | Yes | `LOG_001` | **PK**. Audit record tracker |
-| `user_id` | Text | Yes | FK Relation: `users.user_id` | Actor tracking identity identifier |
-| `action` | Text | Yes | `Posted Broadcast`, `Formed Hub` | Strict action declaration tracking |
-| `timestamp` | DateTime | Yes | `2026-05-10 14:23` | System execution tracking timestamp |
-
-- [x] **Task 1.4:** Seed the PostgreSQL schema with 2 Certified BDSP structures, 60 KBS student parameters, and test LGA bounds.
+- [x] **Task 1.1:** Initialize Git source control hierarchy (`/backend`, `/frontend`, `/whatsapp-bot`) **[ACHIEVED]**
+- [x] **Task 1.2:** Provision local development relational storage instance **[ACHIEVED]**
+- [x] **Task 1.3:** Setup local target mock tables (`users`, `network_members`, `posts`, `hubs`, `deals`, `activity_log`) **[ACHIEVED]**
 
 ---
 
-## Phase 2: Core Backend API Development
-*Objective: Build the unified REST engine to parse requests from both Web and WhatsApp channels.*
+## Phase 2: Core Prototype Business Logic
+*Objective: Build standard authentication, role access validation, and posting lifecycles.*
 
-- [x] **Task 2.1:** Build registration and login authentication routines mapping directly against the user model fields.
-- [x] **Task 2.2:** Establish middleware to read the `is_bdsp` flag. Restrict network aggregation views and hub compilation parameters to `is_bdsp=True`.
-- [x] **Task 2.3:** Implement `posts` pipeline to process BUY/SELL listings securely linking to `user_id`.
-- [x] **Task 2.4:** Build hub processing logic. Enable BDSPs to aggregate an array of text IDs (`member_user_ids`) into a cohesive cluster.
-- [x] **Task 2.5:** Program database triggers/hooks to automatically compute the **70% V4V / 30% BDSP Commission split** inside `TABLE 5: deals`.
-- [x] **Task 2.6:** Configure global event middleware to log every transaction automatically to `TABLE 6: activity_log` for NITDA audit capability.
+- [x] **Task 2.1:** Implement phone identification and password hashing routines **[ACHIEVED]**
+- [x] **Task 2.2:** Configure `is_bdsp` validation check barriers across secure platform routes **[ACHIEVED]**
+- [x] **Task 2.3:** Deploy mock transactional escrow status states (`Funds-Held-Placeholder`) **[ACHIEVED]**
 
 ---
 
-## Phase 3: WhatsApp Bot Integration (Channel 1)
-*Objective: Deploy a lightweight interactive bot interface for field user operations.*
+## Phase 3: DB Migration & Full Marketplace Upgrade (Round 2)
+*Objective: Refactor the database layout into an enterprise-ready 6-table relational mode to support full marketplace mechanics, banking fields, and dual-lock escrow logic.*
 
-- [x] **Task 3.1:** Connect a backend listener to process inbound webhooks from the Meta Cloud API / BSP wrapper.
-- [x] **Task 3.2:** Build conversational text routing tree mapping out interactive registration prompts:
-  - Capture Name -> Phone -> Primary Role -> LGA selection (`Chikun`).
-  - Output explicit **NDPC Data Consent notice**. Capture `True` via button click before recording user to `TABLE 1`.
-- [x] **Task 3.3:** Build interactive listing tree. Enable farmers and suppliers to configure items (`Maize`, `NPK`), selecting `SELL` or `BUY` type properties to feed `TABLE 3`.
+- [ ] **Task 3.1:** Execute data migration scripts to drop prototype layout tables and instantiate the upgraded `v4v_dpi` database using the production DDL:
+
+### Upgraded Table 1: `actors`
+| Field Name | Type | Key/Relation | Target Options / Constraints |
+| :--- | :--- | :---: | :--- |
+| `actor_id` | BIGINT UNSIGNED | **PK** | Auto Increment |
+| `actor_type` | ENUM | - | `'SHF','AGGREGATOR','INPUT_VENDOR','LOGISTICS','BDSP','KBS','AGRA','INVESTOR','V4V_ADMIN'` |
+| `full_name` | VARCHAR(255) | - | Required |
+| `phone` | VARCHAR(20) | **Unique** | Required Index for WhatsApp OTP Sign-Up |
+| `channel` | ENUM | - | `'USSD','WHATSAPP','WEB','APP'` (Default: `'WHATSAPP'`) |
+| `bank_name` | VARCHAR(100) | - | Required for payout routing |
+| `account_number` | VARCHAR(20) | - | Required for payout routing |
+| `state` | VARCHAR(50) | - | Default: `'Kaduna'` |
+| `lga` | VARCHAR(100) | - | Composite Index Target |
+| `gps_lat` | DECIMAL(10,8) | - | Target for precision logistics routing |
+| `gps_lng` | DECIMAL(11,8) | - | Target for precision logistics routing |
+| `kyc_status` | ENUM | - | `'PENDING','VERIFIED','REJECTED'` (Default: `'PENDING'`) |
+| `gender` | ENUM | - | `'MALE','FEMALE','OTHER'` (IFC KPI target) |
+| `bdsp_id` | BIGINT UNSIGNED | **FK** | References `actors(actor_id)` ON DELETE SET NULL (Tracks Mini-Networks) |
+| `wallet_balance` | DECIMAL(15,2) | - | Default: `0.00` |
+| `created_at` | TIMESTAMP | - | Default: `CURRENT_TIMESTAMP` |
+| `updated_at` | TIMESTAMP | - | Default `CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP` |
+
+### Upgraded Table 2: `transactions`
+| Field Name | Type | Key/Relation | Target Options / Constraints |
+| :--- | :--- | :---: | :--- |
+| `tx_id` | BIGINT UNSIGNED | **PK** | Auto Increment |
+| `buyer_id` | BIGINT UNSIGNED | **FK** | References `actors(actor_id)` |
+| `seller_id` | BIGINT UNSIGNED | **FK** | References `actors(actor_id)` |
+| `logistics_id` | BIGINT UNSIGNED | **FK** | References `actors(actor_id)` (Assigned Logistics Partner) |
+| `commodity` | VARCHAR(100) | - | Required (e.g., `'Maize'`, `'Soybean'`, or input items) |
+| `quantity_kg` | DECIMAL(12,2) | - | Required volume metric |
+| `unit_price` | DECIMAL(12,2) | - | Required unit pricing ledger value |
+| `total_amount` | DECIMAL(15,2) | **Generated** | `ALWAYS AS (quantity_kg * unit_price) STORED` |
+| `status` | ENUM | - | `'INITIATED','IN_ESCROW','DISPATCHED','DELIVERED','COMPLETED','DISPUTED'` |
+| `trucker_pod_confirmed`| BOOLEAN | - | Default: `FALSE` (Part 1 of Dual POD Lock) |
+| `buyer_pod_confirmed`  | BOOLEAN | - | Default: `FALSE` (Part 2 of Dual POD Lock) |
+| `escrow_required`| BOOLEAN | **Generated** | `ALWAYS AS (total_amount > 50) STORED` |
+| `commission_v4v` | DECIMAL(15,2) | - | Auto-calculated share |
+| `commission_bdsp`| DECIMAL(15,2) | - | Auto-calculated share |
+
+### Upgraded Table 3: `escrow`
+| Field Name | Type | Key/Relation | Target Options / Constraints |
+| :--- | :--- | :---: | :--- |
+| `escrow_id` | BIGINT UNSIGNED | **PK** | Auto Increment |
+| `tx_id` | BIGINT UNSIGNED | **FK / Unique**| References `transactions(tx_id)` ON DELETE CASCADE |
+| `amount` | DECIMAL(15,2) | - | Required active transaction value metric |
+| `funded_by` | BIGINT UNSIGNED | **FK** | References `actors(actor_id)` (Buyer Link) |
+| `status` | ENUM | - | `'HELD','RELEASED_TO_SELLER','REFUNDED_TO_BUYER'` |
+| `funded_at` | TIMESTAMP | - | Default: `CURRENT_TIMESTAMP` |
+| `released_at` | TIMESTAMP | - | Nullable confirmation timestamp parameter |
+
+### Upgraded Table 4: `loans`
+| Field Name | Type | Key/Relation | Target Options / Constraints |
+| :--- | :--- | :---: | :--- |
+| `loan_id` | BIGINT UNSIGNED | **PK** | Auto Increment |
+| `actor_id` | BIGINT UNSIGNED | **FK** | References `actors(actor_id)` |
+| `lender_bank` | VARCHAR(100) | - | Target Bank Identity (e.g., `'BOA'`) |
+| `amount` | DECIMAL(15,2) | - | Capital total |
+| `tenor_months` | INT | - | Credit timeline window parameter |
+| `interest_rate` | DECIMAL(5,2) | - | Numerical percentage calculation value |
+| `credit_score` | INT | - | Calculated index using historical transaction metrics |
+| `status` | ENUM | - | `'APPLIED','APPROVED','DISBURSED','REPAID','DEFAULTED'` |
+| `insurance_policy_id`| VARCHAR(100)| - | Cross-reference link to active NAIC/AXA policy |
+
+### Upgraded Table 5: `insurance_policies`
+| Field Name | Type | Key/Relation | Target Options / Constraints |
+| :--- | :--- | :---: | :--- |
+| `policy_id` | BIGINT UNSIGNED | **PK** | Auto Increment |
+| `actor_id` | BIGINT UNSIGNED | **FK** | References `actors(actor_id)` |
+| `provider` | ENUM | - | `'NAIC'`,`'AXA'` |
+| `policy_type` | ENUM | - | `'CROP'`, `'LIVESTOCK'`, `'EQUIPMENT'` |
+| `premium` | DECIMAL(12,2) | - | Calculated buyer insurance liability value |
+| `sum_insured` | DECIMAL(15,2) | - | Financial coverage envelope capacity |
+| `status` | ENUM | - | `'ACTIVE'`, `'CLAIMED'`, `'EXPIRED'` |
+| `commission_v4v` | DECIMAL(12,2) | - | Auto-calculated coverage margin (**12% constant**) |
+
+### Upgraded Table 6: `training_records`
+| Field Name | Type | Key/Relation | Target Options / Constraints |
+| :--- | :--- | :---: | :--- |
+| `record_id` | BIGINT UNSIGNED | **PK** | Auto Increment |
+| `actor_id` | BIGINT UNSIGNED | **FK** | References `actors(actor_id)` |
+| `course_name` | VARCHAR(255) | - | e.g., `'Financial Literacy'`, `'Climate-Smart Farming'` |
+| `provider` | VARCHAR(100) | - | Default: `'KBS TRAINING HUB'` |
+| `status` | ENUM | - | `'ENROLLED'`, `'COMPLETED'`, `'FAILED'` |
+
+- [ ] **Task 3.2:** Configure database performance tracking indexes on `actors(actor_type, state)`, `transactions(status)`, and composite structural mappings on `training_records(actor_id, course_name)`.
+- [ ] **Task 3.3:** Inject production mock seed data containing baseline entities across all 9 roles to test end-to-end interactions.
 
 ---
 
-## Phase 4: Web Platform Development (Channel 2)
-*Objective: Create the management dashboards for administrative tracking and BDSP cluster oversight.*
+## Phase 4: Enterprise API & Dual-Lock Middleware Extension
+*Objective: Build core business logic handling 9-role signups, automatic commissions, and double-confirmation tracking.*
 
-- [x] **Task 4.1:** Scaffold frontend framework architecture with custom theme elements matching enterprise parameters.
-- [x] **Task 4.2:** Design login interfaces that read user roles directly from database fields.
-- [x] **Task 4.3:** Build BDSP Network Management Interface:
-  - Dynamically read mappings from `TABLE 2: network_members`.
-  - Display user distribution metrics, active postings, and aggregate the commission calculations ledger.
-- [x] **Task 4.4:** Construct the global marketplace timeline grid allowing users to view real-time listings filterable by LGA parameters.
-
----
-
-## Phase 5: Escrow Logic & Deal Simulation
-*Objective: Implement the safe 3-way delivery verification system required for tokenized fund release.*
-
-- [x] **Task 5.1:** Add `buyer_confirmed_at`, `logistics_confirmed_at`, `seller_confirmed_at` columns to `deals` table + `post_ids` column to `hubs` table for explicit post-linking.
-- [x] **Task 5.2:** Build backend escrow endpoints:
-  - `GET /deals/my` — participant-scoped deal list
-  - `GET /deals/:dealId` — single deal (participant only)
-  - `PATCH /deals/:dealId/deposit` — BDSP deposits funds
-  - `PATCH /deals/:dealId/confirm/buyer` — buyer confirms receipt
-  - `PATCH /deals/:dealId/confirm/logistics` — logistics confirms delivery
-  - `PATCH /deals/:dealId/confirm/seller` — seller confirms dispatch
-  - `PATCH /deals/:dealId/cancel` — BDSP cancels deal
-  - Auto-release: when all 3 confirmations are non-null, escrow_status → Released, hub → Completed, posts → Closed
-- [x] **Task 5.3:** Build frontend Deals page with role-based confirmation UI:
-  - New `DealsView.jsx` component with deal cards, confirmation progress track, role-aware action buttons
-  - Updated `App.jsx` — "Deals" sidebar item for all authenticated users, deals state & fetch
-  - Login screen shows demo credentials for buyer/logistics/seller roles
+- [ ] **Task 4.1:** Build standard authentication pipelines using an internal Phone + Mock WhatsApp OTP validation simulator that requires bank details on signup.
+- [ ] **Task 4.2:** Implement the **NDPC Regulatory Consent Middleware**:
+  > Intercept all structural write commands on `/actors/register`. If explicit user data-consent flags are missing, block execution and return `Error 400: { "status": "error", "message": "NDPC data privacy consent required" }`.
+- [ ] **Task 4.3:** Program the **Automated Marketplace Revenue Engine Hook**:
+  > Create an async database listener to fire upon successful deal creation. If transaction total exceeds $50, lock funds in escrow and calculate platform distribution margins:
+  > `commission_v4v = total_amount * 0.02 * 0.70`
+  > `commission_bdsp = total_amount * 0.02 * 0.30`
+- [ ] **Task 4.4:** Build the **Dual POD Escalation Verification Route** (`/api/v1/transactions/:id/confirm-pod`):
+  > Accept flags for either `trucker_pod_confirmed` or `buyer_pod_confirmed`. Escrow funds state cannot transition to `RELEASED_TO_SELLER` until both boolean records resolve to true.
+- [ ] **Task 4.5:** Implement automated text logging handlers to mirror all transactional modifications into local audit trail storage to maintain strict NITDA 2019 compliance.
 
 ---
 
-## Phase 6: QA, End-to-End Testing & Cloud Deployment
-*Objective: Validate multi-channel data operations and launch the live staging cluster.*
+## Phase 5: Local Document Engines & Partner Mocking
+*Objective: Construct localized template rendering engines without using external cloud platform APIs.*
 
-- [x] **Task 6.1:** Harden backend config for production — `requireEnv()` helper that fails fast in production when env vars are missing, warns in dev with insecure defaults.
-- [x] **Task 6.2:** Write Dockerfile for backend container deployment on Render.
-- [ ] **Task 6.3:** Deploy backend + PostgreSQL to Render staging environment.
-- [ ] **Task 6.4:** Execute complete walkthrough simulation and update test.md with deployment instructions.
-- [ ] **Task 6.5:** Add GitHub Actions CI for automated deploy on push to main.
+- [ ] **Task 5.1:** Integrate a decoupled local document compiler library (e.g., `FPDF` or `jsPDF`) into the core runtime engine.
+- [ ] **Task 5.2:** Build the standardized **Escrow Account Confirmation Voucher Template** mapping out tracking references, payment amounts, and holding locks. Save generated documents directly to local project paths: `/var/www/v4v.ng/pdfs/`.
+- [ ] **Task 5.3:** Build the standardized **Digital Insurance Certificate Template** pulling active relational data parameters directly from `insurance_policies`.
+- [ ] **Task 5.4:** Create structured API data mocking switches to return test data configurations representing external systems like NAIC, AXA, or partner bank systems.
+
+---
+
+## Phase 6: Role-Based Dashboards & Frontend Layouts
+*Objective: Build a mobile-optimized frontend using persistent branding headers (KBS, AGRA logos) and separate view configurations mapped to the 9 user roles.*
+
+- [ ] **Task 6.1:** Place high-visibility **KBS and AGRA partner branding logos** into the master layout application header across all application states.
+- [ ] **Task 6.2:** Develop registration interfaces capturing phone records, custom bank detail entries, and an explicit role assignment selector field.
+- [ ] **Task 6.3:** Implement the **9 Distinct Role Dashboards** via dynamic conditional state parameters:
+  *   **SHF Interface:** Form inputs to post crop harvests, clean visualization vectors to view pending aggregator offers, and live payout status monitors.
+  *   **Aggregator Interface:** Live purchasing dashboard to search distributed SHF harvest offers, batch procurement filters, and logistics assignment tools.
+  *   **Input Vendor Interface:** Inventory listing management portal, real-time inbound product order alerts, and transaction history cards.
+  *   **BDSP Interface:** Downline network view (list of farmers onboarded by their specific account ID), commission trackers, and localized performance KPI cards.
+  *   **Logistics Partner Interface:** Open freight/delivery job acceptance boards, routing maps, and double-lock POD submission controls (Trucker confirmation switch).
+  *   **KBS Interface:** Training hub master view, digital student/BDSP certification action triggers, and global performance report generation toolsets.
+  *   **AGRA Interface:** High-level strategic analytical layout, aggregate macroeconomic regional production summaries, and automated NDPR-compliant export handlers.
+  *   **Investor Interface:** Capital distribution tracking maps, open credit facility opportunities, and aggregated agricultural loan portfolio trackers.
+  *   **V4V Admin Interface:** Comprehensive system control panel, open escrow ledger overrides, manual conflict reconciliation workflows, and system health monitors.
+
+---
+
+## Phase 7: Validation, Compliance, & Production Hardening
+*Objective: Run multi-channel verification tests and extract compliance audit trails.*
+
+- [ ] **Task 7.1:** Execute end-to-end multi-channel sync validation tracking (Register user via simulated WhatsApp data payload -> confirm matching database record entry inside `actors` -> inspect real-time visual output on the Web Management Grid).
+- [ ] **Task 7.2:** Build the **IFC Monitoring & Evaluation Data Webhook Endpoint** (`/webhooks/ifc`) to summarize and export aggregate data, including total transaction volume, lending portfolios, and women onboarding ratios.
+- [ ] **Task 7.3:** Verify the **NITDA Secure Compliance Extraction Endpoint** (`/api/v1/activity/export`), ensuring it properly compiles and streams active transaction logs into a clean, comma-separated format.

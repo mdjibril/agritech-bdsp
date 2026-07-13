@@ -112,8 +112,7 @@ async function findUserByPhone(phone) {
 }
 
 async function createWhatsAppUser(data) {
-  const temporaryPassword = `whatsapp:${data.phone}:${Date.now()}`;
-  const passwordHash = await bcrypt.hash(temporaryPassword, 12);
+  const passwordHash = await bcrypt.hash(data.password, 12);
 
   return transaction(async (client) => {
     const result = await client.query(
@@ -223,6 +222,16 @@ async function handleRegister(phone, text, session) {
       return ['Registration cancelled. Your data was not saved. Reply REGISTER to start again.'];
     }
 
+    session.step = 'password';
+    return ['Choose a password for your account (minimum 8 characters).'];
+  }
+
+  if (session.step === 'password') {
+    if (!text || String(text).trim().length < 8) {
+      return ['Password must be at least 8 characters. Choose a password for your account.'];
+    }
+
+    session.data.password = String(text).trim();
     const user = await createWhatsAppUser(session.data);
     clearSession(phone);
     return [
