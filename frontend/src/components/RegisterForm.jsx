@@ -11,7 +11,7 @@ const ROLES = [
   { value: 'KBS', label: 'KBS Staff' },
   { value: 'AGRA', label: 'AGRA Partner' },
   { value: 'INVESTOR', label: 'Investor' },
-  { value: 'V4V_ADMIN', label: 'V4V Admin' },
+  // V4V_ADMIN omitted — admin accounts are provisioned internally only
 ];
 
 const GENDERS = [
