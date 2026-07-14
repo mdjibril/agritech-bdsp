@@ -51,11 +51,15 @@ app.use('/api/v1/escrow', v1EscrowRoutes);
 app.use('/api/v1/documents', v1DocumentRoutes);
 app.use('/api/v1/mocks', v1MockRoutes);
 
-// Backward-compatibility shims
+// Backward-compatibility shims (also under /api for production without Vite proxy)
 app.use('/auth', shimAuthRoutes);
+app.use('/api/auth', shimAuthRoutes);
 app.use('/posts', shimPostRoutes);
+app.use('/api/posts', shimPostRoutes);
 app.use('/deals', shimDealRoutes);
+app.use('/api/deals', shimDealRoutes);
 app.use('/bdsp', shimBdspRoutes);
+app.use('/api/bdsp', shimBdspRoutes);
 
 // WhatsApp webhook (keep working)
 app.use('/whatsapp', whatsappRoutes);
