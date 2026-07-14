@@ -3,7 +3,7 @@ const API_PREFIX = '/api';
 // On Render (production), the frontend is a separate static site.
 // The backend lives at VITE_API_BASE_URL — set by the Render env var.
 // In dev, Vite proxy rewrites relative /api/* to localhost:4000.
-const BASE = import.meta.env.VITE_API_BASE_URL || '';
+const BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '');
 
 export async function api(path, options = {}) {
   const token = localStorage.getItem('v4v_token');

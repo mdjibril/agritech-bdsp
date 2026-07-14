@@ -211,6 +211,7 @@ export default function App() {
       body: JSON.stringify({ phone, password }),
     });
     localStorage.setItem('v4v_token', result.token);
+    if (!result.user) throw new Error('Login response missing user data');
     const u = normalizeUser(result.user);
     localStorage.setItem('v4v_user', JSON.stringify(u));
     setUser(u);
