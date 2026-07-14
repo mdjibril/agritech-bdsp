@@ -238,7 +238,7 @@ export default function App() {
     setDealsLoading(true);
     try {
       const result = await api('/deals/my');
-      setDeals(result.deals);
+      setDeals(result.deals || []);
       setError('');
     } catch (err) { setError(err.message); }
     finally { setDealsLoading(false); }

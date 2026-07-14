@@ -65,7 +65,7 @@ export default function DealsView({ deals, user, loading, onRefresh }) {
         const showSellerConfirm = deal.seller_user_ids?.includes(user?.user_id)
           && deal.escrow_status === 'Funds-Held-Placeholder' && !sellerDone;
 
-        return <article key={deal.deal_id} className={`deal-card ${deal.escrow_status.toLowerCase()}`}>
+        return <article key={deal.deal_id} className={`deal-card ${(deal.escrow_status || '').toLowerCase()}`}>
           <div className="deal-header" onClick={() => setExpanded(isExpanded ? null : deal.deal_id)}>
             <div className="deal-id-row">
               <strong>{deal.deal_id}</strong>

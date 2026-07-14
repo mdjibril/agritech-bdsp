@@ -13,17 +13,17 @@ export default function AGRADashboard({ user }) {
     apiV1('/transactions').then((r) => setTransactions(r.transactions || [])).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <Loading />;
-
-  const completed = transactions.filter((t) => t.status === 'COMPLETED');
-  const totalVolume = transactions.reduce((s, t) => s + Number(t.total_amount), 0);
-  const completedVolume = completed.reduce((s, t) => s + Number(t.total_amount), 0);
+  const completed = useMemo(() => transactions.filter((t) => t.status === 'COMPLETED'), [transactions]);
+  const totalVolume = useMemo(() => transactions.reduce((s, t) => s + Number(t.total_amount), 0), [transactions]);
+  const completedVolume = useMemo(() => completed.reduce((s, t) => s + Number(t.total_amount), 0), [completed]);
   const commodities = useMemo(() => {
     const map = {};
     transactions.forEach((t) => { map[t.commodity] = (map[t.commodity] || 0) + Number(t.total_amount); });
     return Object.entries(map).sort((a, b) => b[1] - a[1]);
   }, [transactions]);
   const topCommodity = commodities[0]?.[0] || 'N/A';
+
+  if (loading) return <Loading />;
 
   return (
     <Page
