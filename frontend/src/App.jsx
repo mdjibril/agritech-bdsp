@@ -18,6 +18,7 @@ import KBSDashboard from './dashboards/KBSDashboard';
 import AGRADashboard from './dashboards/AGRADashboard';
 import InvestorDashboard from './dashboards/InvestorDashboard';
 import V4VAdminDashboard from './dashboards/V4VAdminDashboard';
+import ReportsView from './ReportsView';
 
 const ROLE_NAV = {
   SHF: [
@@ -275,43 +276,8 @@ export default function App() {
 
       {page === 'marketplace' && <MarketplaceView user={user} />}
 
-      {page === 'reports' && (user.actor_type === 'KBS' || user.actor_type === 'AGRA') && (
-        <div className="page">
-          <div className="page-head"><div><h1>Reports</h1><p>Performance reports and data exports</p></div></div>
-          <div className="panel">
-            <div className="panel-head"><div><h2>Available reports</h2></div></div>
-            <div className="report-list">
-              {user.actor_type === 'KBS' && (
-                <>
-                  <div className="report-item">
-                    <GraduationCap size={20} />
-                    <div><strong>Training completion report</strong><span>Certification tracking and participant outcomes</span></div>
-                    <button className="secondary-button sm">Generate <BarChart3 size={14} /></button>
-                  </div>
-                  <div className="report-item">
-                    <Users size={20} />
-                    <div><strong>Network participation summary</strong><span>BDSP performance and farmer onboarding KPIs</span></div>
-                    <button className="secondary-button sm">Generate <BarChart3 size={14} /></button>
-                  </div>
-                </>
-              )}
-              {user.actor_type === 'AGRA' && (
-                <>
-                  <div className="report-item">
-                    <Globe size={20} />
-                    <div><strong>Regional production summary</strong><span>Aggregate commodity volumes by LGA</span></div>
-                    <button className="secondary-button sm">Export <BarChart3 size={14} /></button>
-                  </div>
-                  <div className="report-item">
-                    <Shield size={20} />
-                    <div><strong>NDPR compliance export</strong><span>Audit-ready data for regulatory reporting</span></div>
-                    <button className="secondary-button sm">Export <BarChart3 size={14} /></button>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
+      {page === 'reports' && (user.actor_type === 'KBS' || user.actor_type === 'V4V_ADMIN') && (
+        <ReportsView user={user} />
       )}
     </RoleShell>
   );

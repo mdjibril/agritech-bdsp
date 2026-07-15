@@ -5,6 +5,21 @@ const { notFound } = require('../../httpError');
 
 const router = express.Router();
 
+// GET /api/v1/actors — List all actors (V4V_ADMIN only)
+router.get('/', requireAuth, async (req, res, next) => {
+  try {
+    if (req.user.actor_type !== 'V4V_ADMIN') {
+      return res.status(403).json({ error: 'Admin role required' });
+    }
+    const result = await query(
+      'SELECT actor_id, actor_type, full_name, phone, channel, kyc_status, gender, lga, state, bdsp_id, wallet_balance, created_at FROM actors ORDER BY created_at DESC'
+    );
+    res.json({ actors: result.rows });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // GET /api/v1/actors/:id — Profile
 router.get('/:id', requireAuth, async (req, res, next) => {
   try {

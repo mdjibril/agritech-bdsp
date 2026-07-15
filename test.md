@@ -2170,3 +2170,117 @@ echo "=== ALL PHASE 6 CHECKS PASSED ==="
 | Non-BDSP blocked from BDSP route | 403 Forbidden on `/bdsp/network` | 6.3 |
 | Mobile responsive | Sidebar collapses, grids stack, usable at 760px | 6.3 |
 | Frontend builds clean | `npm run build` succeeds without errors | 6.3 |
+
+## End-to-End Transaction Flow (Smallholder Farmer)
+
+This walkthrough covers the full lifecycle: registration → harvest listing → buyer purchase → logistics → escrow release → reporting.
+
+### Prerequisites
+
+- Backend, frontend, and database are running
+- You have the demo aggregator credentials: `+2348100000011` / `password123` (actor_id: 11)
+- You have the demo logistics credentials: `+2348100000017` / `password123` (actor_id: 17)
+
+### Step 1 — Register as a Smallholder Farmer
+
+1. Open the app at `http://localhost:5173`
+2. Click **Create new account**
+3. Fill in the registration form:
+   - **Full name**: e.g. *Hadiza Mohammed*
+   - **Phone**: e.g. *+2348160591684* (use a unique number)
+   - **Role**: *Smallholder Farmer (SHF)*
+   - **Gender**: *Female*
+   - **LGA**: *Chikun*
+   - **State**: *Kaduna*
+4. Click **Continue**
+5. Fill step 2:
+   - **Bank name**: *GTBank*
+   - **Account number**: *0123456789*
+   - **Password**: set a password
+   - Confirm password
+   - Check the NDPC consent box
+6. Click **Create account**
+7. ✅ You're logged in to the **My Farm Dashboard** with metrics at 0
+
+### Step 2 — Post a Harvest for Sale
+
+1. On the My Farm Dashboard, click **Post harvest**
+2. Fill in:
+   - **Commodity**: *Maize*
+   - **Quantity (kg)**: *500*
+   - **Unit price (₦/kg)**: *350*
+   - **Buyer (optional)**: leave empty (or enter `11` for the aggregator demo)
+3. Click **List for sale**
+4. ✅ A new transaction is created. You'll see it in the transaction history below with status **INITIATED**
+
+> ⚠️ If you left buyer empty, the transaction still creates successfully — the system accepts `null` for buyer. A BDSP or aggregator can match later.
+
+### Step 3 — Aggregator Buys the Harvest (switch role)
+
+1. Log out (sidebar → **Sign out**)
+2. Log in as the aggregator: `+2348100000011` / `password123`
+3. Go to **Dashboard** — you'll see the **Aggregator Dashboard**
+4. The purchase ledger shows all transactions. If you entered a buyer_id above, you'll see it here.
+5. Click **Deals** in the sidebar to view escrow status (if the transaction is escrow-protected)
+
+### Step 4 — BDSP Deposits Funds (if escrow required)
+
+1. Log out and log in as BDSP: `+2348100000001` / `password123`
+2. Go to **Deals**
+3. Find the deal and click **Deposit Funds**
+4. ✅ Status moves from `INITIATED` to `IN_ESCROW` (funds held)
+
+### Step 5 — Logistics Confirms Delivery (POD)
+
+1. Log out and log in as logistics: `+2348100000017` / `password123`
+2. Go to **Dashboard** (labeled **Jobs**)
+3. Find the job in the freight table
+4. Click **Confirm POD** (Proof of Delivery)
+5. ✅ `trucker_pod_confirmed` set to `true`, status progresses
+
+### Step 6 — Buyer Confirms Receipt
+
+1. Log back in as the aggregator (`+2348100000011`)
+2. Go to **Deals**
+3. Find the deal and click **Confirm Receipt**
+4. ✅ Buyer side confirmed
+
+### Step 7 — Seller Confirms Dispatch
+
+1. Log back in as your SHF farmer (`+2348160591684`)
+2. Go to **Deals**
+3. Click **Confirm Dispatch**
+4. ✅ All three confirmations received → deal releases, funds disperse
+
+### Step 8 — View Reports (KBS / AGRA roles)
+
+Only **KBS** and **AGRA** roles can access the Reports page.
+
+#### As KBS Staff:
+
+1. Log out and log in as KBS: phone is not in the demo list — register a new account with role **KBS Staff**
+2. Go to **Training Hub** dashboard — you'll see aggregate transaction KPIs (total volume, completed deals)
+3. Click **Reports** in the sidebar
+4. ✅ See available reports:
+   - **Training completion report** — Certification tracking and participant outcomes
+   - **Network participation summary** — BDSP performance and farmer onboarding KPIs
+5. Click **Generate** on either to trigger the report handler
+
+#### As AGRA Partner:
+
+1. Log out and log in as AGRA: create/use a **AGRA Partner** account
+2. Go to **Overview** dashboard — commodity distribution, completion rates, NDPC compliance status
+3. Click **Reports** in the sidebar
+4. ✅ See available reports:
+   - **Regional production summary** — Aggregate commodity volumes by LGA
+   - **NDPR compliance export** — Audit-ready data for regulatory reporting
+5. Click **Export** to trigger the data stream
+
+### Demo Credentials Reference
+
+| Role | Phone | Password | actor_id |
+|------|-------|----------|----------|
+| BDSP | `+2348100000001` | `password123` | 1 |
+| Aggregator | `+2348100000011` | `password123` | 11 |
+| Logistics | `+2348100000017` | `password123` | 17 |
+| SHF Farmer | `+2348100000003` | `password123` | 3 |

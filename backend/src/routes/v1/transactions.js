@@ -31,6 +31,15 @@ router.post('/', requireAuth, async (req, res, next) => {
     }
 
     const result = await transaction(async (client) => {
+      // Auto-assign any logistics partner if none provided
+      let logisticsId = req.body.logistics_id ? Number(req.body.logistics_id) : null;
+      if (!logisticsId) {
+        const log = await client.query(
+          "SELECT actor_id FROM actors WHERE actor_type = 'LOGISTICS' ORDER BY RANDOM() LIMIT 1"
+        );
+        if (log.rows.length) logisticsId = log.rows[0].actor_id;
+      }
+
       // 1. Insert transaction — total_amount, escrow_required, commissions auto-computed
       const tx = await client.query(
         `INSERT INTO transactions (buyer_id, seller_id, logistics_id, commodity, quantity_kg, unit_price)
@@ -39,7 +48,7 @@ router.post('/', requireAuth, async (req, res, next) => {
         [
           Number(req.body.buyer_id),
           Number(req.body.seller_id),
-          req.body.logistics_id ? Number(req.body.logistics_id) : null,
+          logisticsId,
           req.body.commodity,
           req.body.quantity_kg,
           req.body.unit_price,
@@ -77,9 +86,9 @@ router.post('/', requireAuth, async (req, res, next) => {
 router.get('/', requireAuth, async (req, res, next) => {
   try {
     const result = await query(
-      `${TX_SELECT} WHERE $1 IN (t.buyer_id, t.seller_id, t.logistics_id)
+      `${TX_SELECT} WHERE $1 IN (t.buyer_id, t.seller_id, t.logistics_id) OR $2
        ORDER BY t.created_at DESC LIMIT 100`,
-      [req.user.actor_id]
+      [req.user.actor_id, req.user.actor_type === 'V4V_ADMIN']
     );
     res.json({ transactions: result.rows });
   } catch (err) {

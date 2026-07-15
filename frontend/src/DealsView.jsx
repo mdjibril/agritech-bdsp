@@ -31,10 +31,24 @@ const STATUS_STYLES = {
 
 export default function DealsView({ deals, user, loading, onRefresh }) {
   const [expanded, setExpanded] = useState(null);
+  const [logisticsInput, setLogisticsInput] = useState({});
 
   async function handleAction(endpoint) {
     try {
       await api(endpoint, { method: 'PATCH' });
+      onRefresh();
+    } catch (err) {
+      alert(err.message);
+    }
+  }
+
+  async function handleAssignLogistics(dealId, logisticsId) {
+    try {
+      await api(`/deals/${dealId}/assign-logistics`, {
+        method: 'PATCH',
+        body: JSON.stringify({ logistics_id: logisticsId }),
+      });
+      setLogisticsInput((prev) => ({ ...prev, [dealId]: '' }));
       onRefresh();
     } catch (err) {
       alert(err.message);
@@ -96,6 +110,17 @@ export default function DealsView({ deals, user, loading, onRefresh }) {
 
             {!allDone && deal.escrow_status !== 'Cancelled' && <div className="deal-actions">
               {showDeposit && <button className="primary-button" onClick={() => handleAction(`/deals/${deal.deal_id}/deposit`)}><Clock size={16} />Deposit Funds</button>}
+              {!deal.logistics_user_id && user?.is_bdsp && (
+                <span style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <input
+                    style={{ width: 100, padding: '6px 8px', fontSize: 12 }}
+                    placeholder="Logistics ID"
+                    value={logisticsInput[deal.deal_id] || ''}
+                    onChange={(e) => setLogisticsInput((p) => ({ ...p, [deal.deal_id]: e.target.value }))}
+                  />
+                  <button className="secondary-button sm" onClick={() => handleAssignLogistics(deal.deal_id, logisticsInput[deal.deal_id])} disabled={!logisticsInput[deal.deal_id]}>Assign Logistics</button>
+                </span>
+              )}
               {showBuyerConfirm && <button className="primary-button" onClick={() => handleAction(`/deals/${deal.deal_id}/confirm/buyer`)}>Confirm Receipt</button>}
               {showLogConfirm && <button className="primary-button" onClick={() => handleAction(`/deals/${deal.deal_id}/confirm/logistics`)}>Confirm Delivery</button>}
               {showSellerConfirm && <button className="primary-button" onClick={() => handleAction(`/deals/${deal.deal_id}/confirm/seller`)}>Confirm Dispatch</button>}

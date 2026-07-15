@@ -5,13 +5,33 @@ import Page, { Loading } from '../components/Page';
 import Metric from '../components/Metric';
 import StatusBadge from '../components/StatusBadge';
 
+const ROLE_LABELS = {
+  SHF: 'Smallholder Farmer',
+  AGGREGATOR: 'Aggregator',
+  INPUT_VENDOR: 'Input Vendor',
+  LOGISTICS: 'Logistics Partner',
+  BDSP: 'Certified BDSP',
+  KBS: 'KBS Staff',
+  AGRA: 'AGRA Partner',
+  INVESTOR: 'Investor',
+  V4V_ADMIN: 'V4V Admin',
+};
+
 export default function V4VAdminDashboard({ user }) {
   const [transactions, setTransactions] = useState([]);
+  const [actors, setActors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
+  const [roleFilter, setRoleFilter] = useState('all');
 
   useEffect(() => {
-    apiV1('/transactions').then((r) => setTransactions(r.transactions || [])).catch(() => {}).finally(() => setLoading(false));
+    Promise.all([
+      apiV1('/transactions').then((r) => r.transactions || []),
+      apiV1('/actors').then((r) => r.actors || []).catch(() => []),
+    ]).then(([txs, acts]) => {
+      setTransactions(txs);
+      setActors(acts);
+    }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
   if (loading) return <Loading />;
@@ -27,13 +47,25 @@ export default function V4VAdminDashboard({ user }) {
     : filter === 'active' ? transactions.filter((t) => t.status !== 'COMPLETED' && t.status !== 'DISPUTED')
     : transactions;
 
+  const roleCounts = {};
+  for (const a of actors) {
+    roleCounts[a.actor_type] = (roleCounts[a.actor_type] || 0) + 1;
+  }
+
+  const recentActivity = [...transactions]
+    .sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at))
+    .slice(0, 10);
+
+  const filteredActors = roleFilter === 'all' ? actors : actors.filter((a) => a.actor_type === roleFilter);
+  const uniqueRoles = [...new Set(actors.map((a) => a.actor_type))];
+
   return (
-    <Page title="V4V Admin Console" subtitle="System control, escrow oversight, and health monitoring.">
+    <Page title="V4V Admin Console" subtitle="System control, escrow oversight, user registry, and health monitoring.">
       <div className="metrics-grid">
         <Metric label="Total transactions" value={transactions.length} note="System-wide" icon={Activity} />
         <Metric label="Active escrows" value={activeEscrows.length} note="Funds held" icon={Wallet} />
         <Metric label="Disputed" value={disputed.length} note="Needs attention" icon={AlertTriangle} />
-        <Metric label="Total V4V revenue" value={money(totalV4V)} note="Platform fees" icon={Shield} />
+        <Metric label="Registered users" value={actors.length} note="All roles" icon={Users} />
       </div>
 
       <div className="two-column" style={{ marginBottom: 20 }}>
@@ -67,16 +99,49 @@ export default function V4VAdminDashboard({ user }) {
         </section>
       </div>
 
-      <section className="panel">
-        <div className="panel-head">
-          <div><h2>Escrow ledger</h2><p>All transactions requiring escrow</p></div>
-          <div className="filter-group">
-            {['all', 'active', 'disputed'].map((f) => (
-              <button key={f} className={`filter-chip ${filter === f ? 'active' : ''}`} onClick={() => setFilter(f)}>
-                {f.charAt(0).toUpperCase() + f.slice(1)}
-              </button>
-            ))}
-          </div>
+      <section className="panel" style={{ marginBottom: 20 }}>
+        <div className="panel-head"><div><h2>User registry</h2><p>All registered actors — {actors.length} total</p></div></div>
+        {actors.length === 0 ? <p className="muted-text">No users found</p> : (
+          <>
+            <div className="filter-group" style={{ marginBottom: 16 }}>
+              <button className={`filter-chip ${roleFilter === 'all' ? 'active' : ''}`} onClick={() => setRoleFilter('all')}>All ({actors.length})</button>
+              {uniqueRoles.map((role) => (
+                <button key={role} className={`filter-chip ${roleFilter === role ? 'active' : ''}`} onClick={() => setRoleFilter(role)}>{ROLE_LABELS[role] || role} ({roleCounts[role]})</button>
+              ))}
+            </div>
+            <div className="table-wrap">
+              <table>
+                <thead><tr><th>Actor ID</th><th>Name</th><th>Phone</th><th>Role</th><th>Gender</th><th>KYC</th><th>LGA</th><th>BDSP ID</th><th>Wallet</th><th>Joined</th></tr></thead>
+                <tbody>
+                  {filteredActors.map((a) => (
+                    <tr key={a.actor_id}>
+                      <td><strong>{a.actor_id}</strong></td>
+                      <td>{a.full_name}</td>
+                      <td>{a.phone}</td>
+                      <td><span className="role-chip">{ROLE_LABELS[a.actor_type] || a.actor_type}</span></td>
+                      <td>{a.gender}</td>
+                      <td><StatusBadge status={a.kyc_status} /></td>
+                      <td>{a.lga}</td>
+                      <td>{a.bdsp_id || '—'}</td>
+                      <td>{money(a.wallet_balance)}</td>
+                      <td>{new Date(a.created_at).toLocaleDateString('en-NG', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+      </section>
+
+      <section className="panel" style={{ marginBottom: 20 }}>
+        <div className="panel-head"><div><h2>Escrow ledger</h2><p>All transactions requiring escrow</p></div></div>
+        <div className="filter-group" style={{ marginBottom: 16 }}>
+          {['all', 'active', 'disputed'].map((f) => (
+            <button key={f} className={`filter-chip ${filter === f ? 'active' : ''}`} onClick={() => setFilter(f)}>
+              {f.charAt(0).toUpperCase() + f.slice(1)}
+            </button>
+          ))}
         </div>
         <div className="table-wrap">
           <table>
@@ -96,6 +161,29 @@ export default function V4VAdminDashboard({ user }) {
             </tbody>
           </table>
         </div>
+      </section>
+
+      <section className="panel">
+        <div className="panel-head"><div><h2>Recent activity</h2><p>Latest updates across the platform</p></div></div>
+        {recentActivity.length === 0 ? <p className="muted-text">No activity yet</p> : (
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>Time</th><th>Commodity</th><th>Amount</th><th>Buyer</th><th>Seller</th><th>Status</th></tr></thead>
+              <tbody>
+                {recentActivity.map((t) => (
+                  <tr key={t.tx_id}>
+                    <td>{new Date(t.updated_at || t.created_at).toLocaleString('en-NG', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</td>
+                    <td><strong>{t.commodity}</strong></td>
+                    <td>{money(t.total_amount)}</td>
+                    <td>{t.buyer_name || `#${t.buyer_id}`}</td>
+                    <td>{t.seller_name || `#${t.seller_id}`}</td>
+                    <td><StatusBadge status={t.status} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
     </Page>
   );

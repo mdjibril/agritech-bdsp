@@ -26,10 +26,10 @@ function mapDeal(tx) {
     deal_value: Number(tx.total_amount),
     escrow_status: escrowStatus,
     insurance_status: 'Certificate-Issued-Placeholder',
-    buyer_user_id: `ACT_${String(tx.buyer_id).padStart(3, '0')}`,
-    seller_user_ids: [`ACT_${String(tx.seller_id).padStart(3, '0')}`],
-    logistics_user_id: tx.logistics_id ? `ACT_${String(tx.logistics_id).padStart(3, '0')}` : null,
-    bdsp_user_id: tx.bdsp_id ? `ACT_${String(tx.bdsp_id).padStart(3, '0')}` : `ACT_${String(tx.seller_id).padStart(3, '0')}`,
+    buyer_user_id: String(tx.buyer_id),
+    seller_user_ids: [String(tx.seller_id)],
+    logistics_user_id: tx.logistics_id ? String(tx.logistics_id) : null,
+    bdsp_user_id: tx.bdsp_id ? String(tx.bdsp_id) : String(tx.seller_id),
     buyer_confirmed_at: tx.buyer_pod_confirmed ? tx.updated_at : null,
     logistics_confirmed_at: tx.trucker_pod_confirmed ? tx.updated_at : null,
     seller_confirmed_at: tx.created_at,
@@ -60,13 +60,15 @@ router.get('/', requireAuth, async (req, res, next) => {
   }
 });
 
-// GET /deals/my — User's transactions as participant
+// GET /deals/my — User's transactions as participant (BDSP sees downline, admin sees all)
 router.get('/my', requireAuth, async (req, res, next) => {
   try {
     const result = await query(
       `${DEAL_SELECT} WHERE $1 IN (t.buyer_id, t.seller_id, t.logistics_id)
+       OR (seller.bdsp_id = $1)
+       OR ($2)
        ORDER BY t.tx_id DESC`,
-      [req.user.actor_id]
+      [req.user.actor_id, req.user.actor_type === 'V4V_ADMIN']
     );
     res.json({ deals: result.rows.map(mapDeal) });
   } catch (err) {
@@ -148,6 +150,24 @@ router.patch('/:dealId/confirm/logistics', requireAuth, async (req, res, next) =
 // PATCH /deals/:dealId/confirm/seller — Seller confirms dispatch (no direct equivalent, stub)
 router.patch('/:dealId/confirm/seller', requireAuth, async (req, res, next) => {
   res.json({ message: 'Seller confirmed' });
+});
+
+// PATCH /deals/:dealId/assign-logistics — BDSP assigns a logistics partner to the deal
+router.patch('/:dealId/assign-logistics', requireAuth, async (req, res, next) => {
+  try {
+    const txId = Number(req.params.dealId.replace(/^TXN_0*/, ''));
+    if (!req.body.logistics_id) return next(badRequest('logistics_id is required'));
+    const tx = (await query('SELECT * FROM transactions WHERE tx_id = $1', [txId])).rows[0];
+    if (!tx) return next(notFound('Deal not found'));
+    if (tx.status === 'COMPLETED' || tx.status === 'DISPUTED') return next(badRequest('Cannot assign logistics to a completed or disputed deal'));
+
+    const logisticsId = Number(req.body.logistics_id);
+    await query('UPDATE transactions SET logistics_id = $1 WHERE tx_id = $2', [logisticsId, txId]);
+    res.locals.auditAction = `Legacy assign logistics ${logisticsId} to transaction ${txId}`;
+    res.json({ message: 'Logistics assigned', logistics_id: String(logisticsId) });
+  } catch (err) {
+    next(err);
+  }
 });
 
 // PATCH /deals/:dealId/cancel — Cancel deal

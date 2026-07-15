@@ -36,3 +36,6 @@ Let us build the full functional V4V marketplace app? It will be a proper intera
 2. Immediately turn your **v4v-agri-tech-solutions.pages.textmint.ai** page into the branded headquarters -- the main intro site that says who V4V is, shows KBS/AGRA logos at the bottom, and has the big "Enter the Marketplace" button that opens the marketplace app. To a visitor, it looks and feels like the same brand.
 
 That way you get one brand presence with a proper working marketplace behind it.
+
+
+Network growth report, user activity audit, escrow status report (aging for stuck ones), commission ledger export.
