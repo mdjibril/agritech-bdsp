@@ -26,7 +26,7 @@ const TX_SELECT = `
 router.post('/', requireAuth, async (req, res, next) => {
   try {
     requireFields(req.body, 'buyer_id', 'seller_id', 'commodity', 'quantity_kg', 'unit_price');
-    if (req.user.actor_type !== 'BDSP' && req.user.actor_id !== Number(req.body.buyer_id) && req.user.actor_id !== Number(req.body.seller_id)) {
+    if (req.user.actor_type !== 'BDSP' && Number(req.user.actor_id) !== Number(req.body.buyer_id) && Number(req.user.actor_id) !== Number(req.body.seller_id)) {
       return next(forbidden('Only BDSP or a party to the transaction can create it'));
     }
 
