@@ -7,3 +7,18 @@ build/
 __pycache__/
 *.pyc
 coverage/
+
+# Generated / build artifacts
+backend/pdfs/
+
+# Agent / IDE directories
+.agents/
+.codex/
+.commandcode/
+
+# Logs
+*.log
+
+# Temp
+tmp/
+temp/
