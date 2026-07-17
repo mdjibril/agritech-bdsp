@@ -8,6 +8,24 @@ const VALID_ACTOR_TYPES = ['SHF', 'AGGREGATOR', 'INPUT_VENDOR', 'LOGISTICS', 'BD
 const VALID_GENDERS = ['MALE', 'FEMALE', 'OTHER'];
 const VALID_CHANNELS = ['USSD', 'WHATSAPP', 'WEB', 'APP'];
 
+const ROLE_OPTIONS = [
+  { id: 'SHF', title: 'Smallholder Farmer', description: 'Individual farmer' },
+  { id: 'AGGREGATOR', title: 'Aggregator', description: 'Bulk purchase & logistics' },
+  { id: 'INPUT_VENDOR', title: 'Input Vendor', description: 'Seeds, fertilizer, tools' },
+  { id: 'LOGISTICS', title: 'Logistics Partner', description: 'Transport & delivery' },
+  { id: 'BDSP', title: 'Certified BDSP', description: 'BDSP network member' },
+  { id: 'KBS', title: 'KBS Staff', description: 'Knowledge & training' },
+  { id: 'AGRA', title: 'AGRA Partner', description: 'Strategic partner' },
+  { id: 'INVESTOR', title: 'Investor', description: 'Credit & investment' },
+  { id: 'V4V_ADMIN', title: 'V4V Admin', description: 'System administrator' },
+];
+
+const GENDER_OPTIONS = [
+  { id: 'FEMALE', title: 'Female', description: 'She/Her' },
+  { id: 'MALE', title: 'Male', description: 'He/Him' },
+  { id: 'OTHER', title: 'Other', description: 'Non-binary / Prefer not to say' },
+];
+
 function normalizePhone(phone) {
   if (!phone) return '';
   const cleaned = String(phone).trim().replace(/[^\d+]/g, '');
@@ -47,6 +65,38 @@ function readInboundMessage(payload) {
   return readLocalMessage(payload) || readMetaMessage(payload);
 }
 
+function roleMenu() {
+  return {
+    type: 'list',
+    header: 'V4V Registration',
+    body: 'Select your role in the network:',
+    footer: 'Chikun Agricultural Network',
+    button: 'Choose role',
+    sections: [{ title: 'Roles', rows: ROLE_OPTIONS }],
+  };
+}
+
+function genderMenu() {
+  return {
+    type: 'list',
+    body: 'Select gender for IFC KPI reporting:',
+    footer: 'NDPC-compliant data handling',
+    button: 'Choose gender',
+    sections: [{ title: 'Gender', rows: GENDER_OPTIONS }],
+  };
+}
+
+function consentButtons() {
+  return {
+    type: 'button',
+    body: 'NDPC Consent Notice: V4V will store your identity, phone, role, location, and market activity for onboarding, marketplace matching, audit, and POC reporting.',
+    buttons: [
+      { id: 'YES', title: 'Yes, I consent' },
+      { id: 'NO', title: 'No, cancel' },
+    ],
+  };
+}
+
 function menuText() {
   return [
     'V4V Agritech menu:',
@@ -54,10 +104,6 @@ function menuText() {
     '2. Reply POST to create a SELL listing.',
     '3. Reply MENU anytime to restart.',
   ].join('\n');
-}
-
-function rolePrompt() {
-  return 'Select role: SHF, AGGREGATOR, INPUT_VENDOR, LOGISTICS, BDSP, KBS, AGRA, INVESTOR, or V4V_ADMIN.';
 }
 
 function resetSession(phone, mode) {
@@ -98,9 +144,9 @@ async function createWhatsAppUser(data) {
   return transaction(async (client) => {
     const result = await client.query(
       `INSERT INTO actors (full_name, phone, password_hash, actor_type, channel, bank_name, account_number, gender, lga, state, kyc_status)
-       VALUES ($1, $2, $3, $4, 'WHATSAPP', $5, $6, $7, 'Chikun', 'Kaduna', 'PENDING')
+       VALUES ($1, $2, $3, $4, 'WHATSAPP', $5, $6, $7, $8, $9, 'PENDING')
        RETURNING actor_id, phone, full_name, actor_type, channel, gender, lga, state`,
-      [data.full_name, data.phone, passwordHash, data.actor_type, data.bank_name, data.account_number, data.gender],
+      [data.full_name, data.phone, passwordHash, data.actor_type, data.bank_name, data.account_number, data.gender, data.lga || 'Chikun', data.state || 'Kaduna'],
     );
 
     await client.query('INSERT INTO activity_log (actor_id, action) VALUES ($1, $2)', [
@@ -136,38 +182,38 @@ async function createWhatsAppPost(phone, data) {
 
 async function handleRegister(phone, text, session) {
   if (session.step === 'start') {
+    // Use the phone WhatsApp already knows — no need to ask
+    session.data.phone = phone;
+    session.data.lga = 'Chikun';
+    session.data.state = 'Kaduna';
+
+    const existing = await findActorByPhone(phone);
+    if (existing) {
+      clearSession(phone);
+      return [`You are already registered as ${existing.full_name} (${existing.actor_type}). Reply POST to create a listing.`];
+    }
+
     session.step = 'name';
-    return ['Welcome to V4V onboarding. What is your full name?'];
+    return ['Welcome to V4V Agritech onboarding. What is your full name?'];
   }
 
   if (session.step === 'name') {
     session.data.full_name = text;
-    session.step = 'phone';
-    return ['Enter your phone number in international format, e.g. +2348102529947.'];
-  }
-
-  if (session.step === 'phone') {
-    session.data.phone = normalizePhone(text);
-    const existing = await findActorByPhone(session.data.phone);
-    if (existing) {
-      clearSession(phone);
-      return [`This phone is already registered as ${existing.full_name}. Reply POST to create a listing.`];
-    }
     session.step = 'role';
-    return [rolePrompt()];
+    return [roleMenu()];
   }
 
   if (session.step === 'role') {
     const role = parseChoice(text, VALID_ACTOR_TYPES);
-    if (!role) return [rolePrompt()];
+    if (!role) return [roleMenu()];
     session.data.actor_type = role;
     session.step = 'gender';
-    return ['Select gender for IFC KPI reporting: MALE, FEMALE, or OTHER.'];
+    return [genderMenu()];
   }
 
   if (session.step === 'gender') {
     const gender = parseChoice(text, VALID_GENDERS);
-    if (!gender) return ['Select gender: MALE, FEMALE, or OTHER.'];
+    if (!gender) return [genderMenu()];
     session.data.gender = gender;
     session.step = 'bank_name';
     return ['Enter your bank name for payout routing (e.g., GTBank, Zenith, UBA).'];
@@ -176,23 +222,13 @@ async function handleRegister(phone, text, session) {
   if (session.step === 'bank_name') {
     session.data.bank_name = text;
     session.step = 'account_number';
-    return ['Enter your bank account number for payouts.'];
+    return ['Enter your 10-digit bank account number for payouts.'];
   }
 
   if (session.step === 'account_number') {
     session.data.account_number = text;
-    session.step = 'lga';
-    return ['Enter LGA. For this POC, only Chikun is accepted.'];
-  }
-
-  if (session.step === 'lga') {
-    if (text.toLowerCase() !== 'chikun') {
-      return ['This POC is restricted to Chikun LGA. Reply Chikun to continue.'];
-    }
     session.step = 'consent';
-    return [
-      'NDPC Consent Notice: V4V will store your identity, phone, role, location, and market activity for onboarding, marketplace matching, audit, and POC reporting. Reply YES to consent or NO to cancel.',
-    ];
+    return [consentButtons()];
   }
 
   if (session.step === 'consent') {
@@ -206,13 +242,13 @@ async function handleRegister(phone, text, session) {
 
   if (session.step === 'password') {
     if (!text || String(text).trim().length < 8) {
-      return ['Password must be at least 8 characters. Choose a password for your account.'];
+      return ['Password must be at least 8 characters. Reply MENU to restart or try again.'];
     }
     session.data.password = String(text).trim();
     const actor = await createWhatsAppUser(session.data);
     clearSession(phone);
     return [
-      `Registration complete. Your V4V ID is ACT_${String(actor.actor_id).padStart(3, '0')}. Reply POST to create a SELL listing.`,
+      `Registration complete! Your V4V ID is ACT_${String(actor.actor_id).padStart(3, '0')} (${actor.actor_type}). Reply POST to create a SELL listing.`,
     ];
   }
 
@@ -292,34 +328,13 @@ async function handleInboundMessage(message) {
   return [menuText()];
 }
 
-async function sendWhatsAppText(to, body) {
+async function sendWhatsAppText(to, raw) {
   if (!config.whatsappAccessToken || !config.whatsappPhoneNumberId) {
     return { skipped: true, reason: 'WhatsApp credentials are not configured' };
   }
 
-  const isConsentPrompt = body.startsWith('NDPC Consent Notice:');
-  const message = isConsentPrompt
-    ? {
-        messaging_product: 'whatsapp',
-        to: to.replace(/^\+/, ''),
-        type: 'interactive',
-        interactive: {
-          type: 'button',
-          body: { text: body },
-          action: {
-            buttons: [
-              { type: 'reply', reply: { id: 'YES', title: 'Yes, I consent' } },
-              { type: 'reply', reply: { id: 'NO', title: 'No' } },
-            ],
-          },
-        },
-      }
-    : {
-        messaging_product: 'whatsapp',
-        to: to.replace(/^\+/, ''),
-        type: 'text',
-        text: { body },
-      };
+  // raw can be a string (plain text) or an object { type, body, ... }
+  const message = typeof raw === 'string' ? buildTextMessage(to, raw) : buildInteractiveMessage(to, raw);
 
   const response = await fetch(
     `https://graph.facebook.com/${config.whatsappApiVersion}/${config.whatsappPhoneNumberId}/messages`,
@@ -338,6 +353,65 @@ async function sendWhatsAppText(to, body) {
     throw new Error(`WhatsApp send failed: ${JSON.stringify(payload)}`);
   }
   return payload;
+}
+
+function buildTextMessage(to, body) {
+  return {
+    messaging_product: 'whatsapp',
+    to: to.replace(/^\+/, ''),
+    type: 'text',
+    text: { body },
+  };
+}
+
+function buildInteractiveMessage(to, spec) {
+  const base = {
+    messaging_product: 'whatsapp',
+    to: to.replace(/^\+/, ''),
+    type: 'interactive',
+  };
+
+  if (spec.type === 'list') {
+    return {
+      ...base,
+      interactive: {
+        type: 'list',
+        header: spec.header ? { type: 'text', text: spec.header } : undefined,
+        body: { text: spec.body },
+        footer: spec.footer ? { text: spec.footer } : undefined,
+        action: {
+          button: spec.button || 'Select option',
+          sections: spec.sections.map((s) => ({
+            title: s.title,
+            rows: s.rows.map((r) => ({
+              id: r.id,
+              title: r.title.slice(0, 24),
+              description: r.description ? r.description.slice(0, 72) : undefined,
+            })),
+          })),
+        },
+      },
+    };
+  }
+
+  if (spec.type === 'button') {
+    return {
+      ...base,
+      interactive: {
+        type: 'button',
+        body: { text: spec.body },
+        action: {
+          buttons: spec.buttons.map((b) => ({
+            type: 'reply',
+            reply: { id: b.id, title: b.title.slice(0, 20) },
+          })),
+        },
+      },
+    };
+  }
+
+  // fallback — plain text
+  return buildTextMessage(to, spec.body || spec);
 }
 
 module.exports = {
