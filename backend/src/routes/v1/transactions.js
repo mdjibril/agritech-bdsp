@@ -1,6 +1,6 @@
 const express = require('express');
 const { query, transaction } = require('../../db');
-const { requireFields } = require('../../validation');
+const { requireFields, assertOneOf, VALID_CATEGORIES } = require('../../validation');
 const { requireAuth, requireRole } = require('../../middleware/auth');
 const { badRequest, forbidden, notFound } = require('../../httpError');
 
@@ -12,66 +12,106 @@ const TX_SELECT = `
          t.commodity, t.quantity_kg, t.unit_price, t.total_amount,
          t.status, t.trucker_pod_confirmed, t.buyer_pod_confirmed,
          t.escrow_required, t.commission_v4v, t.commission_bdsp,
+         t.category,
          t.created_at, t.updated_at,
          buyer.full_name AS buyer_name,
          seller.full_name AS seller_name,
          logistics.full_name AS logistics_name
   FROM transactions t
-  JOIN actors buyer ON buyer.actor_id = t.buyer_id
-  JOIN actors seller ON seller.actor_id = t.seller_id
+  LEFT JOIN actors buyer ON buyer.actor_id = t.buyer_id
+  LEFT JOIN actors seller ON seller.actor_id = t.seller_id
   LEFT JOIN actors logistics ON logistics.actor_id = t.logistics_id`;
 
 // POST /api/v1/transactions
-// Creates a transaction and atomically funds escrow if escrow_required
+// Supports:
+//   - SELL listing: seller_id + commodity (no buyer_id) → status LISTED
+//   - BUY request:  buyer_id  + commodity (no seller_id) → status BUY_REQUEST
+//   - Direct deal:  seller_id + buyer_id                  → status INITIATED/IN_ESCROW
 router.post('/', requireAuth, async (req, res, next) => {
   try {
-    requireFields(req.body, 'buyer_id', 'seller_id', 'commodity', 'quantity_kg', 'unit_price');
-    if (req.user.actor_type !== 'BDSP' && Number(req.user.actor_id) !== Number(req.body.buyer_id) && Number(req.user.actor_id) !== Number(req.body.seller_id)) {
-      return next(forbidden('Only BDSP or a party to the transaction can create it'));
+    const hasBuyer = !!req.body.buyer_id;
+    const hasSeller = !!req.body.seller_id;
+
+    if (!hasBuyer && !hasSeller) {
+      return next(badRequest('At least one of buyer_id or seller_id is required'));
+    }
+    if (!req.body.commodity) return next(badRequest('Field "commodity" is required'));
+    if (!req.body.quantity_kg) return next(badRequest('Field "quantity_kg" is required'));
+    if (!req.body.unit_price) return next(badRequest('Field "unit_price" is required'));
+
+    if (req.body.category) {
+      assertOneOf(req.body.category, VALID_CATEGORIES, 'category');
+    }
+
+    // Auth check
+    if (hasBuyer && hasSeller) {
+      if (req.user.actor_type !== 'BDSP' &&
+          Number(req.user.actor_id) !== Number(req.body.buyer_id) &&
+          Number(req.user.actor_id) !== Number(req.body.seller_id)) {
+        return next(forbidden('Only BDSP or a party to the transaction can create it'));
+      }
+    } else if (hasSeller && !hasBuyer) {
+      if (Number(req.user.actor_id) !== Number(req.body.seller_id)) {
+        return next(forbidden('Only the seller can create a sell listing'));
+      }
+    } else if (hasBuyer && !hasSeller) {
+      if (!['BDSP', 'AGGREGATOR', 'INPUT_VENDOR'].includes(req.user.actor_type)) {
+        return next(forbidden('Only BDSP, Aggregator, or Input Vendor can create buy requests'));
+      }
+      if (Number(req.user.actor_id) !== Number(req.body.buyer_id)) {
+        return next(forbidden('You can only create buy requests for yourself'));
+      }
     }
 
     const result = await transaction(async (client) => {
-      // Auto-assign any logistics partner if none provided
-      let logisticsId = req.body.logistics_id ? Number(req.body.logistics_id) : null;
-      if (!logisticsId) {
-        const log = await client.query(
-          "SELECT actor_id FROM actors WHERE actor_type = 'LOGISTICS' ORDER BY RANDOM() LIMIT 1"
-        );
-        if (log.rows.length) logisticsId = log.rows[0].actor_id;
+      let logisticsId = null;
+      if (hasBuyer && hasSeller) {
+        // Direct deal: auto-assign logistics
+        logisticsId = req.body.logistics_id ? Number(req.body.logistics_id) : null;
+        if (!logisticsId) {
+          const log = await client.query(
+            "SELECT actor_id FROM actors WHERE actor_type = 'LOGISTICS' ORDER BY RANDOM() LIMIT 1"
+          );
+          if (log.rows.length) logisticsId = log.rows[0].actor_id;
+        }
       }
 
-      // 1. Insert transaction — total_amount, escrow_required, commissions auto-computed
+      const buyId = hasBuyer ? Number(req.body.buyer_id) : null;
+      const sellId = hasSeller ? Number(req.body.seller_id) : null;
+
       const tx = await client.query(
-        `INSERT INTO transactions (buyer_id, seller_id, logistics_id, commodity, quantity_kg, unit_price)
-         VALUES ($1, $2, $3, $4, $5, $6)
+        `INSERT INTO transactions (buyer_id, seller_id, logistics_id, commodity, category, quantity_kg, unit_price)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
          RETURNING *`,
-        [
-          Number(req.body.buyer_id),
-          Number(req.body.seller_id),
-          logisticsId,
-          req.body.commodity,
-          req.body.quantity_kg,
-          req.body.unit_price,
-        ]
+        [buyId, sellId, logisticsId, req.body.commodity, req.body.category || 'Crop', req.body.quantity_kg, req.body.unit_price]
       );
-      const transaction = tx.rows[0];
+      const txn = tx.rows[0];
 
-      // 2. If escrow is required, create escrow record atomically
-      if (transaction.escrow_required) {
-        await client.query(
-          `INSERT INTO escrow (tx_id, amount, funded_by, status)
-           VALUES ($1, $2, $3, 'HELD')`,
-          [transaction.tx_id, transaction.total_amount, transaction.buyer_id]
-        );
-        // Update transaction status to IN_ESCROW
-        await client.query(
-          "UPDATE transactions SET status = 'IN_ESCROW' WHERE tx_id = $1",
-          [transaction.tx_id]
-        );
-        transaction.status = 'IN_ESCROW';
+      // SELL listing: no buyer
+      if (hasSeller && !hasBuyer) {
+        await client.query("UPDATE transactions SET status = 'LISTED' WHERE tx_id = $1", [txn.tx_id]);
+        txn.status = 'LISTED';
+        return txn;
       }
 
-      return transaction;
+      // BUY request: no seller
+      if (hasBuyer && !hasSeller) {
+        await client.query("UPDATE transactions SET status = 'BUY_REQUEST' WHERE tx_id = $1", [txn.tx_id]);
+        txn.status = 'BUY_REQUEST';
+        return txn;
+      }
+
+      // Direct deal: escrow if needed
+      if (txn.escrow_required) {
+        await client.query(
+          "INSERT INTO escrow (tx_id, amount, funded_by, status) VALUES ($1, $2, $3, 'HELD')",
+          [txn.tx_id, txn.total_amount, txn.buyer_id]
+        );
+        await client.query("UPDATE transactions SET status = 'IN_ESCROW' WHERE tx_id = $1", [txn.tx_id]);
+        txn.status = 'IN_ESCROW';
+      }
+
+      return txn;
     });
 
     res.locals.auditAction = `Created transaction ${result.tx_id}: ${result.quantity_kg}kg ${result.commodity}`;
@@ -85,12 +125,34 @@ router.post('/', requireAuth, async (req, res, next) => {
 // GET /api/v1/transactions
 router.get('/', requireAuth, async (req, res, next) => {
   try {
+    if (req.query.status === 'LISTED' || req.query.status === 'BUY_REQUEST') {
+      const result = await query(
+        `${TX_SELECT} WHERE t.status = $1 ORDER BY t.created_at DESC LIMIT 100`,
+        [req.query.status]
+      );
+      return res.json({ transactions: result.rows });
+    }
+
     const result = await query(
-      `${TX_SELECT} WHERE $1 IN (t.buyer_id, t.seller_id, t.logistics_id) OR $2
+      `${TX_SELECT} WHERE $1 IN (t.seller_id, t.logistics_id) OR t.buyer_id = $1 OR $2
        ORDER BY t.created_at DESC LIMIT 100`,
-      [req.user.actor_id, req.user.actor_type === 'V4V_ADMIN']
+      [req.user.actor_id, ['V4V_ADMIN', 'KBS', 'AGRA'].includes(req.user.actor_type)]
     );
     res.json({ transactions: result.rows });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/v1/transactions/marketplace
+router.get('/marketplace', requireAuth, async (req, res, next) => {
+  try {
+    const [sell, buy, recent] = await Promise.all([
+      query(`${TX_SELECT} WHERE t.status = 'LISTED' ORDER BY t.created_at DESC LIMIT 100`),
+      query(`${TX_SELECT} WHERE t.status = 'BUY_REQUEST' ORDER BY t.created_at DESC LIMIT 100`),
+      query(`${TX_SELECT} WHERE t.status = 'COMPLETED' ORDER BY t.created_at DESC LIMIT 5`),
+    ]);
+    res.json({ sell: sell.rows, buy: buy.rows, recent: recent.rows });
   } catch (err) {
     next(err);
   }
@@ -110,6 +172,101 @@ router.get('/:id', requireAuth, async (req, res, next) => {
       return next(forbidden('Not a participant in this transaction'));
     }
     res.json({ transaction: tx });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// PUT /api/v1/transactions/:id/claim
+// Buyer claims a LISTED transaction — sets buyer_id, moves to INITIATED, assigns logistics, creates escrow if needed
+router.put('/:id/claim', requireAuth, async (req, res, next) => {
+  try {
+    const buyerRole = req.user.actor_type;
+    if (!['BDSP', 'AGGREGATOR', 'INPUT_VENDOR'].includes(buyerRole)) {
+      return next(forbidden('Only BDSP, Aggregator, or Input Vendor can claim listings'));
+    }
+
+    const txResult = await query('SELECT * FROM transactions WHERE tx_id = $1', [Number(req.params.id)]);
+    if (!txResult.rows.length) return next(notFound('Transaction not found'));
+    const tx = txResult.rows[0];
+
+    if (tx.status !== 'LISTED') {
+      return next(badRequest('Only LISTED transactions can be claimed'));
+    }
+
+    const result = await transaction(async (client) => {
+      let logisticsId = null;
+      const log = await client.query(
+        "SELECT actor_id FROM actors WHERE actor_type = 'LOGISTICS' ORDER BY RANDOM() LIMIT 1"
+      );
+      if (log.rows.length) logisticsId = log.rows[0].actor_id;
+
+      await client.query(
+        'UPDATE transactions SET buyer_id = $1, logistics_id = $2, status = $3 WHERE tx_id = $4',
+        [req.user.actor_id, logisticsId, tx.escrow_required ? 'IN_ESCROW' : 'INITIATED', tx.tx_id]
+      );
+
+      if (tx.escrow_required) {
+        await client.query(
+          "INSERT INTO escrow (tx_id, amount, funded_by, status) VALUES ($1, $2, $3, 'HELD')",
+          [tx.tx_id, tx.total_amount, req.user.actor_id]
+        );
+      }
+
+      const updated = await client.query(
+        `${TX_SELECT} WHERE t.tx_id = $1`, [tx.tx_id]
+      );
+      return updated.rows[0];
+    });
+
+    res.locals.auditAction = `Buyer ${req.user.actor_id} claimed transaction ${tx.tx_id}`;
+    res.json({ transaction: result, message: 'Listing claimed successfully' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// PUT /api/v1/transactions/:id/offer
+// Farmer offers to fulfill a BUY_REQUEST — sets seller_id, moves to INITIATED, assigns logistics, creates escrow if needed
+router.put('/:id/offer', requireAuth, async (req, res, next) => {
+  try {
+    if (req.user.actor_type !== 'SHF') {
+      return next(forbidden('Only farmers (SHF) can fulfill buy requests'));
+    }
+
+    const txResult = await query('SELECT * FROM transactions WHERE tx_id = $1', [Number(req.params.id)]);
+    if (!txResult.rows.length) return next(notFound('Transaction not found'));
+    const tx = txResult.rows[0];
+
+    if (tx.status !== 'BUY_REQUEST') {
+      return next(badRequest('Only BUY_REQUEST transactions can be fulfilled'));
+    }
+
+    const result = await transaction(async (client) => {
+      let logisticsId = null;
+      const log = await client.query(
+        "SELECT actor_id FROM actors WHERE actor_type = 'LOGISTICS' ORDER BY RANDOM() LIMIT 1"
+      );
+      if (log.rows.length) logisticsId = log.rows[0].actor_id;
+
+      await client.query(
+        'UPDATE transactions SET seller_id = $1, logistics_id = $2, status = $3 WHERE tx_id = $4',
+        [req.user.actor_id, logisticsId, tx.escrow_required ? 'IN_ESCROW' : 'INITIATED', tx.tx_id]
+      );
+
+      if (tx.escrow_required) {
+        await client.query(
+          "INSERT INTO escrow (tx_id, amount, funded_by, status) VALUES ($1, $2, $3, 'HELD')",
+          [tx.tx_id, tx.total_amount, tx.buyer_id]
+        );
+      }
+
+      const updated = await client.query(`${TX_SELECT} WHERE t.tx_id = $1`, [tx.tx_id]);
+      return updated.rows[0];
+    });
+
+    res.locals.auditAction = `Farmer ${req.user.actor_id} fulfilled buy request ${tx.tx_id}`;
+    res.json({ transaction: result, message: 'Buy request fulfilled successfully' });
   } catch (err) {
     next(err);
   }

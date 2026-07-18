@@ -37,15 +37,15 @@ router.post('/register', requireNpdcConsent, async (req, res, next) => {
     assertOneOf(req.body.gender, VALID_GENDERS, 'gender');
 
     const password_hash = await bcrypt.hash(req.body.password, 12);
+    const bdsp_id = req.body.actor_type === 'SHF' ? 1 : null;
 
     const result = await query(
       `INSERT INTO actors (phone, password_hash, full_name, actor_type, channel, bank_name, account_number, gender, lga, state, kyc_status, bdsp_id)
-       VALUES ($1, $2, $3, $4, COALESCE($5, 'WEB'), $6, $7, $8, COALESCE($9, 'Chikun'), COALESCE($10, 'Kaduna'), 'PENDING',
-         CASE WHEN $4 = 'SHF' THEN 1 ELSE NULL END)
+       VALUES ($1, $2, $3, $4, COALESCE($5, 'WEB'), $6, $7, $8, COALESCE($9, 'Chikun'), COALESCE($10, 'Kaduna'), 'PENDING', $11)
        RETURNING actor_id, phone, full_name, actor_type, channel, bank_name, account_number, kyc_status, gender, bdsp_id, wallet_balance, lga, state, created_at`,
       [req.body.phone, password_hash, req.body.full_name, req.body.actor_type,
        req.body.channel, req.body.bank_name, req.body.account_number,
-       req.body.gender, req.body.lga, req.body.state]
+       req.body.gender, req.body.lga, req.body.state, bdsp_id]
     );
 
     const actor = result.rows[0];

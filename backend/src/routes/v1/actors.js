@@ -5,11 +5,11 @@ const { notFound } = require('../../httpError');
 
 const router = express.Router();
 
-// GET /api/v1/actors — List all actors (V4V_ADMIN only)
+// GET /api/v1/actors — List all actors (V4V_ADMIN and KBS only)
 router.get('/', requireAuth, async (req, res, next) => {
   try {
-    if (req.user.actor_type !== 'V4V_ADMIN') {
-      return res.status(403).json({ error: 'Admin role required' });
+    if (!['V4V_ADMIN', 'KBS'].includes(req.user.actor_type)) {
+      return res.status(403).json({ error: 'Admin or KBS role required' });
     }
     const result = await query(
       'SELECT actor_id, actor_type, full_name, phone, channel, kyc_status, gender, lga, state, bdsp_id, wallet_balance, created_at FROM actors ORDER BY created_at DESC'

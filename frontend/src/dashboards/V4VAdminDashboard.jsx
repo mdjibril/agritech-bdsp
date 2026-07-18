@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Activity, AlertTriangle, RefreshCcw, Search, Server, Shield, Users, Wallet } from 'lucide-react';
+import { Activity, AlertTriangle, Download, FileText, RefreshCcw, Search, Server, Shield, Users, Wallet } from 'lucide-react';
 import { apiV1, money } from '../api';
 import Page, { Loading } from '../components/Page';
 import Metric from '../components/Metric';
@@ -17,20 +17,33 @@ const ROLE_LABELS = {
   V4V_ADMIN: 'V4V Admin',
 };
 
+const STATUS_OPTIONS = ['all', 'COMPLETED', 'ENROLLED', 'FAILED'];
+const GENDER_OPTIONS = ['all', 'MALE', 'FEMALE', 'OTHER'];
+
 export default function V4VAdminDashboard({ user }) {
   const [transactions, setTransactions] = useState([]);
   const [actors, setActors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [roleFilter, setRoleFilter] = useState('all');
+  const [courses, setCourses] = useState([]);
+  const [trainingRecords, setTrainingRecords] = useState([]);
+  const [selectedCourse, setSelectedCourse] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [genderFilter, setGenderFilter] = useState('all');
+  const [showTrainingReport, setShowTrainingReport] = useState(false);
 
   useEffect(() => {
     Promise.all([
       apiV1('/transactions').then((r) => r.transactions || []),
       apiV1('/actors').then((r) => r.actors || []).catch(() => []),
-    ]).then(([txs, acts]) => {
+      apiV1('/training-records/courses').then((r) => r.courses || []).catch(() => []),
+      apiV1('/training-records').then((r) => r.records || []).catch(() => []),
+    ]).then(([txs, acts, coursesData, records]) => {
       setTransactions(txs);
       setActors(acts);
+      setCourses(coursesData);
+      setTrainingRecords(records);
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
@@ -58,6 +71,37 @@ export default function V4VAdminDashboard({ user }) {
 
   const filteredActors = roleFilter === 'all' ? actors : actors.filter((a) => a.actor_type === roleFilter);
   const uniqueRoles = [...new Set(actors.map((a) => a.actor_type))];
+
+  const filteredTrainingRecords = trainingRecords.filter((r) =>
+    (selectedCourse === 'all' || r.course_name === selectedCourse) &&
+    (statusFilter === 'all' || r.status === statusFilter) &&
+    (genderFilter === 'all' || r.gender === genderFilter)
+  );
+
+  function exportTrainingCSV() {
+    const headers = ['Name', 'Phone', 'Role', 'Gender', 'Course', 'Provider', 'Status', 'LGA', 'State', 'Enrolled'];
+    const rows = filteredTrainingRecords.map((r) => [
+      r.full_name,
+      r.phone,
+      r.actor_type,
+      r.gender || 'N/A',
+      r.course_name,
+      r.provider,
+      r.status,
+      r.lga,
+      r.state,
+      new Date(r.created_at).toLocaleDateString('en-NG'),
+    ]);
+    
+    const csv = [headers, ...rows].map((row) => row.map((cell) => `"${cell}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `training-report-${selectedCourse === 'all' ? 'all-courses' : selectedCourse.toLowerCase().replace(/\s+/g, '-')}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   return (
     <Page title="V4V Admin Console" subtitle="System control, escrow oversight, user registry, and health monitoring.">
@@ -135,6 +179,23 @@ export default function V4VAdminDashboard({ user }) {
       </section>
 
       <section className="panel" style={{ marginBottom: 20 }}>
+        <div className="panel-head"><div><h2>Training hub overview</h2><p>KBS training enrollment & certification</p></div></div>
+        {courses.length === 0 ? <p className="muted-text" style={{ padding: 16 }}>No training data yet.</p> : (
+          <div className="kbs-courses" style={{ padding: '0 20px 20px' }}>
+            {courses.map((c) => (
+              <div key={c.course_name} className="course-card">
+                <div className="course-icon"><FileText size={20} /></div>
+                <div>
+                  <strong>{c.course_name}</strong>
+                  <span>{c.provider} · {Number(c.total_enrolled)} enrolled · {Number(c.completed)} certified · ♂{Number(c.male)} ♀{Number(c.female)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="panel" style={{ marginBottom: 20 }}>
         <div className="panel-head"><div><h2>Escrow ledger</h2><p>All transactions requiring escrow</p></div></div>
         <div className="filter-group" style={{ marginBottom: 16 }}>
           {['all', 'active', 'disputed'].map((f) => (
@@ -161,6 +222,96 @@ export default function V4VAdminDashboard({ user }) {
             </tbody>
           </table>
         </div>
+      </section>
+
+      <section className="panel" style={{ marginBottom: 20 }}>
+        <div className="panel-head">
+          <div><h2>Training reports</h2><p>Generate reports by course, status, and demographics</p></div>
+          <button className="secondary-button" onClick={() => setShowTrainingReport(!showTrainingReport)}>
+            <FileText size={16} /> {showTrainingReport ? 'Hide report' : 'Generate report'}
+          </button>
+        </div>
+        {showTrainingReport && (
+          <div style={{ padding: '0 20px 20px' }}>
+            <div style={{ display: 'flex', gap: 12, marginBottom: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span>Course:</span>
+                <select 
+                  value={selectedCourse} 
+                  onChange={(e) => setSelectedCourse(e.target.value)}
+                  style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid var(--border)' }}
+                >
+                  <option value="all">All courses</option>
+                  {courses.map((c) => (
+                    <option key={c.course_name} value={c.course_name}>{c.course_name}</option>
+                  ))}
+                </select>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span>Status:</span>
+                <select 
+                  value={statusFilter} 
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid var(--border)' }}
+                >
+                  {STATUS_OPTIONS.map((s) => (
+                    <option key={s} value={s}>{s === 'all' ? 'All statuses' : s.charAt(0) + s.slice(1).toLowerCase()}</option>
+                  ))}
+                </select>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span>Gender:</span>
+                <select 
+                  value={genderFilter} 
+                  onChange={(e) => setGenderFilter(e.target.value)}
+                  style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid var(--border)' }}
+                >
+                  {GENDER_OPTIONS.map((g) => (
+                    <option key={g} value={g}>{g === 'all' ? 'All genders' : g.charAt(0) + g.slice(1).toLowerCase()}</option>
+                  ))}
+                </select>
+              </label>
+              <button className="primary-button" onClick={exportTrainingCSV}>
+                <Download size={16} /> Export CSV
+              </button>
+            </div>
+            <p className="muted-text" style={{ marginBottom: 12 }}>
+              Showing {filteredTrainingRecords.length} record{filteredTrainingRecords.length !== 1 ? 's' : ''}
+            </p>
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Phone</th>
+                    <th>Role</th>
+                    <th>Gender</th>
+                    <th>Course</th>
+                    <th>Status</th>
+                    <th>LGA</th>
+                    <th>Enrolled</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredTrainingRecords.length === 0 ? (
+                    <tr><td colSpan={8} style={{ textAlign: 'center', padding: 20 }} className="muted-text">No records match the selected filters</td></tr>
+                  ) : filteredTrainingRecords.map((r) => (
+                    <tr key={r.record_id}>
+                      <td><strong>{r.full_name}</strong></td>
+                      <td>{r.phone}</td>
+                      <td><span className="role-chip">{r.actor_type}</span></td>
+                      <td>{r.gender || 'N/A'}</td>
+                      <td>{r.course_name}</td>
+                      <td><StatusBadge status={r.status} /></td>
+                      <td>{r.lga}</td>
+                      <td>{new Date(r.created_at).toLocaleDateString('en-NG', { day: '2-digit', month: 'short' })}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </section>
 
       <section className="panel">

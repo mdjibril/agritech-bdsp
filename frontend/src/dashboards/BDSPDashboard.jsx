@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
-import { BarChart3, Network, PackageOpen, Search, Users, WalletCards } from 'lucide-react';
-import { api, money } from '../api';
+import { useState, useEffect } from 'react';
+import { ArrowDownLeft, BarChart3, Network, PackageOpen, Plus, Search, ShoppingCart, Users, WalletCards } from 'lucide-react';
+import { api, apiV1, money } from '../api';
 import Page, { Loading, Empty } from '../components/Page';
 import Metric from '../components/Metric';
 import PanelHead from '../components/PanelHead';
@@ -9,6 +9,36 @@ export default function BDSPDashboard({ user }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
+  const [showBuyForm, setShowBuyForm] = useState(false);
+  const [buyForm, setBuyForm] = useState({ commodity: '', category: 'Crop', quantity_kg: '', unit_price: '' });
+  const [buySubmitting, setBuySubmitting] = useState(false);
+
+  const categoryConfig = {
+    Crop:     { unit: 'kg',     placeholder: 'e.g. Maize' },
+    Livestock:{ unit: 'heads',  placeholder: 'e.g. Goats' },
+    Input:    { unit: 'bags',   placeholder: 'e.g. NPK Fertilizer' },
+  };
+  const cfg = categoryConfig[buyForm.category] || categoryConfig.Crop;
+
+  async function handlePostBuy(e) {
+    e.preventDefault();
+    setBuySubmitting(true);
+    try {
+      await apiV1('/transactions', {
+        method: 'POST',
+        body: JSON.stringify({
+          commodity: buyForm.commodity,
+          category: buyForm.category,
+          quantity_kg: Number(buyForm.quantity_kg),
+          unit_price: Number(buyForm.unit_price),
+          buyer_id: user.actor_id,
+        }),
+      });
+      setShowBuyForm(false);
+      setBuyForm({ commodity: '', category: 'Crop', quantity_kg: '', unit_price: '' });
+    } catch (err) { alert(err.message); }
+    finally { setBuySubmitting(false); }
+  }
 
   useEffect(() => {
     api('/bdsp/network').then(setData).catch(() => {}).finally(() => setLoading(false));
@@ -26,7 +56,34 @@ export default function BDSPDashboard({ user }) {
   );
 
   return (
-    <Page title="BDSP Network" subtitle="Your downline network overview — members, commissions, and KPIs.">
+    <Page title="BDSP Network" subtitle="Your downline network overview — members, commissions, and KPIs."
+      action={
+        <button className="primary-button" onClick={() => setShowBuyForm(!showBuyForm)}>
+          <Plus size={18} /> {showBuyForm ? 'Cancel' : 'Post buy request'}
+        </button>
+      }
+    >
+      {showBuyForm && (
+        <form onSubmit={handlePostBuy} className="inline-form">
+          <h3><ShoppingCart size={18} /> Post a buy request</h3>
+          <div className="form-grid">
+            <label>
+              Category
+              <select value={buyForm.category} onChange={(e) => setBuyForm({ ...buyForm, category: e.target.value })}>
+                <option value="Crop">Crop</option>
+                <option value="Livestock">Livestock</option>
+                <option value="Input">Input</option>
+              </select>
+            </label>
+            <label>Commodity <input value={buyForm.commodity} onChange={(e) => setBuyForm({ ...buyForm, commodity: e.target.value })} placeholder={cfg.placeholder} required /></label>
+            <label>Quantity ({cfg.unit}) <input type="number" value={buyForm.quantity_kg} onChange={(e) => setBuyForm({ ...buyForm, quantity_kg: e.target.value })} min={1} required /></label>
+            <label>Offered price (₦/{cfg.unit}) <input type="number" value={buyForm.unit_price} onChange={(e) => setBuyForm({ ...buyForm, unit_price: e.target.value })} min={1} required /></label>
+          </div>
+          <button className="primary-button" disabled={buySubmitting}>
+            {buySubmitting ? 'Posting...' : <><ArrowDownLeft size={18} /> Post buy request</>}
+          </button>
+        </form>
+      )}
       <div className="metrics-grid">
         <Metric label="Network members" value={metrics?.member_count || 0} note="Verified mappings" icon={Users} />
         <Metric label="Active listings" value={active} note="Across member accounts" icon={PackageOpen} />

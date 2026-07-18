@@ -41,7 +41,7 @@ function guessUnit(itemName) {
 router.get('/', async (req, res, next) => {
   try {
     const result = await query(
-      `SELECT t.tx_id, t.commodity AS item_name, t.quantity_kg AS quantity,
+      `SELECT t.tx_id, t.commodity AS item_name, t.category, t.quantity_kg AS quantity,
               t.unit_price AS price_per_unit, t.total_amount, t.status,
               t.buyer_id, t.seller_id, t.created_at,
               seller.full_name AS posted_by,
@@ -57,7 +57,7 @@ router.get('/', async (req, res, next) => {
       post_id: `TXN_${String(tx.tx_id).padStart(3, '0')}`,
       user_id: `ACT_${String(tx.seller_id).padStart(3, '0')}`,
       post_type: 'SELL',
-      category: guessCategory(tx.item_name),
+      category: tx.category || guessCategory(tx.item_name),
       item_name: tx.item_name,
       quantity: Number(tx.quantity),
       unit: guessUnit(tx.item_name),

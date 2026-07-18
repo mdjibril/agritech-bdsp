@@ -39,3 +39,38 @@ That way you get one brand presence with a proper working marketplace behind it.
 
 
 Network growth report, user activity audit, escrow status report (aging for stuck ones), commission ledger export.
+
+TODO---
+SOLVED: LIVESTOCK
+SOLVED: ADD A BUY IN THE MARKET PLACE
+SOLVED: INPUT
+SOLVED: KBS-place courses generate report
+SOLVED: Fix buyer to be optional
+-----Deduce percent of v4v, Logistic and BDSP from seller money
+-----The buyer pays for the logistic
+-----weight of good and distance cover
+-----for seller debit for transaction and insurance 
+-----debit for insrance, logistic from the buyer
+-----2% for transaction, insurance
+shf, should be able to enroll for training 
+kbs report should be anonymous, report base on gender, 
+climate report based on farmer participation, names should be replaced by user role
+40% for operational cost, v4v gross, the remaining 60% net , 30% will go to bdsp, 70% goes to v4v
+logo
+
+Option 2: Add category to the listing form (proper fix)
+
+  - Add a category field to the listing form (dropdown: Crop, Livestock, Input)
+  - Store it in the transactions table (requires migration)
+  - Return it directly instead of inferring
+  - This is the correct long-term solution
+
+
+
+"KBS Training Hub" with 4 metrics: Active participants, Total volume, Completed, Certifications
+Training programs list: Financial Literacy, Climate-Smart Farming, Digital Marketplace Ops, Post-Harvest Management
+Each course has an "Enroll" button
+Performance snapshot: total value, avg deal size, completion rate
+Recent activity table with latest transactions
+"Generate report" button
+Sidebar: Dashboard (Training Hub), Reports

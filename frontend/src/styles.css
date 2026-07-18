@@ -58,6 +58,9 @@ input:focus, select:focus { border-color: var(--green-2); box-shadow: 0 0 0 3px 
 .panel-head { border-bottom: 1px solid #edf0ed; margin: -2px 0 24px; padding-bottom: 16px; }.panel-head h2 { font: 700 17px Georgia, "Times New Roman", serif; margin-bottom: 4px; }.panel-head p { font-size: 12px; color: var(--muted); margin: 0; }
 .distribution { display: grid; gap: 22px; }.distribution-label { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 9px; }.bar { height: 8px; background: #edf0ec; overflow: hidden; }.bar i { display: block; height: 100%; background: var(--green-2); }.bar i.secondary { background: var(--lime); }
 .allocation { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }.allocation > div { padding: 12px 20px; border-left: 3px solid var(--green-2); }.allocation > div + div { border-color: var(--lime); }.allocation span, .allocation strong, .allocation small { display: block; }.allocation span { color: var(--muted); font-size: 12px; }.allocation strong { font: 700 22px Georgia, "Times New Roman", serif; margin: 8px 0; }.allocation small { color: #819087; }
+.tab-bar { display: flex; gap: 4px; margin-bottom: 20px; }
+.tab-button { background: white; border: 1px solid var(--line); color: var(--muted); padding: 9px 18px; border-radius: 4px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.tab-button.active { background: var(--green); color: white; border-color: var(--green); }
 .toolbar, .market-filters { background: white; border: 1px solid var(--line); padding: 13px; display: flex; align-items: center; gap: 12px; margin-bottom: 16px; border-radius: 6px; }
 .search { position: relative; width: min(100%, 420px); }.search svg { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: #829087; }.search input { padding-left: 41px; }
 .result-count { margin-left: auto; color: var(--muted); font-size: 13px; }

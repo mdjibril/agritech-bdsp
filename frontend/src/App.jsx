@@ -5,7 +5,7 @@ import {
   GraduationCap, BarChart3, Globe, TrendingUp,
   Shield, Users,
 } from 'lucide-react';
-import { api, apiV1 } from './api';
+import { api, apiV1, money } from './api';
 import DealsView from './DealsView';
 import BrandHeader from './components/BrandHeader';
 import RegisterForm from './components/RegisterForm';
@@ -296,74 +296,166 @@ function ArrowDownSvg() { return <svg width="15" height="15" viewBox="0 0 24 24"
 function PackageSvg() { return <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 6h12"/><path d="M3 12h18"/><path d="M9 18h6"/></svg>; }
 
 function MarketplaceView({ user }) {
-  const [posts, setPosts] = useState([]);
+  const [sellListings, setSellListings] = useState([]);
+  const [buyRequests, setBuyRequests] = useState([]);
+  const [recentDeals, setRecentDeals] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [type, setType] = useState('All');
+  const [tab, setTab] = useState('sell');
   const [category, setCategory] = useState('All');
   const [lga, setLga] = useState('All LGAs');
   const [search, setSearch] = useState('');
+  const [claiming, setClaiming] = useState(null);
+  const [offering, setOffering] = useState(null);
 
-  useEffect(() => {
+  const fetchMarketplace = () => {
     setLoading(true);
-    api('/posts?status=Active').then((r) => setPosts(r.posts)).catch(() => {}).finally(() => setLoading(false));
-  }, []);
+    apiV1('/transactions/marketplace')
+      .then((r) => {
+        setSellListings(r.sell || []);
+        setBuyRequests(r.buy || []);
+        setRecentDeals(r.recent || []);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  };
 
-  const lgaOptions = useMemo(() => ['All LGAs', ...new Set(posts.map((p) => p.lga).filter(Boolean))], [posts]);
-  const filtered = useMemo(() => posts.filter((p) =>
-    (type === 'All' || p.post_type === type) &&
-    (category === 'All' || p.category === category) &&
-    (lga === 'All LGAs' || p.lga === lga) &&
-    `${p.item_name} ${p.posted_by} ${p.lga}`.toLowerCase().includes(search.toLowerCase())
-  ), [posts, type, category, lga, search]);
+  useEffect(() => { fetchMarketplace(); }, []);
+
+  async function handleClaim(txId) {
+    setClaiming(txId);
+    try {
+      await apiV1(`/transactions/${txId}/claim`, { method: 'PUT' });
+      setSellListings((prev) => prev.filter((l) => l.tx_id !== txId));
+    } catch (err) { alert(err.message); }
+    finally { setClaiming(null); }
+  }
+
+  async function handleOffer(txId) {
+    setOffering(txId);
+    try {
+      await apiV1(`/transactions/${txId}/offer`, { method: 'PUT' });
+      setBuyRequests((prev) => prev.filter((l) => l.tx_id !== txId));
+    } catch (err) { alert(err.message); }
+    finally { setOffering(null); }
+  }
+
+  const currentList = tab === 'sell' ? sellListings : tab === 'buy' ? buyRequests : [];
+  const lgaOptions = useMemo(() => ['All LGAs', ...new Set(currentList.map((l) => l.seller_state || l.buyer_state).filter(Boolean))], [currentList]);
+  const filtered = useMemo(() => currentList.filter((l) => {
+    const state = l.seller_state || l.buyer_state || '';
+    return (category === 'All' || l.category === category) &&
+      (lga === 'All LGAs' || state === lga) &&
+      `${l.commodity} ${l.buyer_name || l.seller_name || ''} ${state}`.toLowerCase().includes(search.toLowerCase());
+  }), [currentList, category, lga, search]);
+
+  const buyerRoles = ['BDSP', 'AGGREGATOR', 'INPUT_VENDOR'];
+  const isSHF = user?.actor_type === 'SHF';
 
   return (
     <div className="page">
-      <div className="page-head"><div><h1>Marketplace</h1><p>Live BUY and SELL listings from verified Chikun network participants.</p></div>
-        <button className="secondary-button" onClick={() => { setLoading(true); api('/posts?status=Active').then((r) => setPosts(r.posts)).finally(() => setLoading(false)); }}>Refresh</button>
+      <div className="page-head">
+        <div><h1>Marketplace</h1><p>Open listings, buy requests, and recent activity.</p></div>
+        <button className="secondary-button" onClick={fetchMarketplace}>Refresh</button>
       </div>
-      <div className="market-filters">
-        <div className="search"><SearchSvg />
-          <input placeholder="Search item or participant" value={search} onChange={(e) => setSearch(e.target.value)} />
+
+      <div className="tab-bar" style={{ display: 'flex', gap: 4, marginBottom: 20 }}>
+        {['sell', 'buy', 'recent'].map((t) => (
+          <button key={t} className={`tab-button ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>
+            {t === 'sell' ? `Sell listings (${sellListings.length})` : t === 'buy' ? `Buy requests (${buyRequests.length})` : `Recent deals (${recentDeals.length})`}
+          </button>
+        ))}
+      </div>
+
+      {tab !== 'recent' && (
+        <div className="market-filters">
+          <div className="search"><SearchSvg />
+            <input placeholder={`Search ${tab === 'sell' ? 'commodity or seller' : 'commodity or buyer'}`} value={search} onChange={(e) => setSearch(e.target.value)} />
+          </div>
+          <label className="select-control">
+            <select value={category} onChange={(e) => setCategory(e.target.value)}>
+              {['All', 'Crop', 'Livestock', 'Input'].map((o) => <option key={o}>{o}</option>)}
+            </select>
+            <ChevronSvg />
+          </label>
+          <label className="select-control">
+            <select value={lga} onChange={(e) => setLga(e.target.value)}>
+              {lgaOptions.map((o) => <option key={o}>{o}</option>)}
+            </select>
+            <ChevronSvg />
+          </label>
         </div>
-        <label className="select-control">
-          <select value={type} onChange={(e) => setType(e.target.value)}>{['All', 'SELL', 'BUY'].map((o) => <option key={o}>{o}</option>)}</select>
-          <ChevronSvg />
-        </label>
-        <label className="select-control">
-          <select value={category} onChange={(e) => setCategory(e.target.value)}>{['All', 'Crop', 'Livestock', 'Input'].map((o) => <option key={o}>{o}</option>)}</select>
-          <ChevronSvg />
-        </label>
-        <label className="select-control">
-          <select value={lga} onChange={(e) => setLga(e.target.value)}>{lgaOptions.map((o) => <option key={o}>{o}</option>)}</select>
-          <ChevronSvg />
-        </label>
-      </div>
-      {loading ? <div className="state"><Spinner /><span>Loading listings</span></div> : filtered.length ? (
+      )}
+
+      {loading ? (
+        <div className="state"><Spinner /><span>Loading listings</span></div>
+      ) : tab === 'recent' ? (
+        recentDeals.length ? (
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>Commodity</th><th>Qty</th><th>Value</th><th>Seller</th><th>Buyer</th><th>Date</th></tr></thead>
+              <tbody>
+                {recentDeals.map((d) => (
+                  <tr key={d.tx_id}>
+                    <td><strong>{d.commodity}</strong></td>
+                    <td>{Number(d.quantity_kg)} kg</td>
+                    <td>{money(d.total_amount)}</td>
+                    <td>{d.seller_name}</td>
+                    <td>{d.buyer_name}</td>
+                    <td>{new Date(d.created_at).toLocaleDateString('en-NG', { day: '2-digit', month: 'short' })}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="state"><PackageSvg /><span>No completed deals yet</span></div>
+        )
+      ) : filtered.length ? (
         <div className="listing-grid">
-          {filtered.map((post) => (
-            <article className="listing" key={post.post_id}>
+          {filtered.map((listing) => (
+            <article className="listing" key={listing.tx_id}>
               <div className="listing-top">
-                <span className={`type-chip ${post.post_type.toLowerCase()}`}>
-                  {post.post_type === 'SELL' ? <ArrowUpSvg /> : <ArrowDownSvg />}
-                  {post.post_type}
+                <span className={`type-chip ${tab === 'sell' ? 'sell' : 'buy'}`}>
+                  {tab === 'sell' ? <><ArrowUpSvg />SELL</> : <><ArrowDownSvg />BUY</>}
                 </span>
-                <span>{post.status}</span>
+                <span>{listing.category}</span>
               </div>
-              <div><p>{post.category}</p><h3>{post.item_name}</h3>
-                <strong className="price">{new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', maximumFractionDigits: 0 }).format(Number(post.price_per_unit || 0))} <small>/ {post.unit?.replace(/s$/, '') || 'unit'}</small></strong>
+              <div>
+                <h3>{listing.commodity}</h3>
+                <strong className="price">{money(listing.unit_price)} <small>/ kg</small></strong>
+                <p style={{ marginTop: 4 }}>{Number(listing.quantity_kg).toLocaleString()} kg {tab === 'sell' ? 'available' : 'wanted'}</p>
               </div>
               <dl>
-                <div><dt>Quantity</dt><dd>{Number(post.quantity)} {post.unit}</dd></div>
-                <div><dt>Interest</dt><dd>{post.interested_count || 0} responses</dd></div>
+                <div><dt>Total value</dt><dd>{money(listing.total_amount)}</dd></div>
+                <div><dt>Escrow</dt><dd>{listing.escrow_required ? 'Required' : 'Not required'}</dd></div>
               </dl>
               <footer>
-                <div><strong>{post.posted_by}</strong><span>{post.poster_role} · {post.lga}</span></div>
-                <span>{post.post_id}</span>
+                {tab === 'sell' ? (
+                  <>
+                    <div><strong>{listing.seller_name}</strong><span>SHF · {listing.seller_state || '--'}</span></div>
+                    {buyerRoles.includes(user?.actor_type) && (
+                      <button className="primary-button sm" onClick={() => handleClaim(listing.tx_id)} disabled={claiming === listing.tx_id}>
+                        {claiming === listing.tx_id ? 'Claiming...' : 'Claim'}
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <div><strong>{listing.buyer_name}</strong><span>{listing.buyer_role || 'Buyer'} · {listing.buyer_state || '--'}</span></div>
+                    {isSHF && (
+                      <button className="primary-button sm" onClick={() => handleOffer(listing.tx_id)} disabled={offering === listing.tx_id}>
+                        {offering === listing.tx_id ? 'Offering...' : 'Fulfill'}
+                      </button>
+                    )}
+                  </>
+                )}
               </footer>
             </article>
           ))}
         </div>
-      ) : <div className="state"><PackageSvg /><span>No listings match these filters</span></div>}
+      ) : (
+        <div className="state"><PackageSvg /><span>No {tab === 'sell' ? 'sell listings' : 'buy requests'} match these filters</span></div>
+      )}
     </div>
   );
 }

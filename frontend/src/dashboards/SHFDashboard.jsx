@@ -8,7 +8,14 @@ export default function SHFDashboard({ user }) {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ commodity: '', quantity_kg: '', unit_price: '', buyer_id: '' });
+  const [form, setForm] = useState({ commodity: '', category: 'Crop', quantity_kg: '', unit_price: '', buyer_id: '' });
+
+  const categoryConfig = {
+    Crop:     { unit: 'kg',     placeholder: 'e.g. Maize' },
+    Livestock:{ unit: 'heads',  placeholder: 'e.g. Goats' },
+    Input:    { unit: 'bags',   placeholder: 'e.g. NPK Fertilizer' },
+  };
+  const cfg = categoryConfig[form.category] || categoryConfig.Crop;
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -23,6 +30,7 @@ export default function SHFDashboard({ user }) {
         method: 'POST',
         body: JSON.stringify({
           commodity: form.commodity,
+          category: form.category,
           quantity_kg: Number(form.quantity_kg),
           unit_price: Number(form.unit_price),
           buyer_id: form.buyer_id || null,
@@ -30,7 +38,7 @@ export default function SHFDashboard({ user }) {
         }),
       });
       setShowForm(false);
-      setForm({ commodity: '', quantity_kg: '', unit_price: '', buyer_id: '' });
+      setForm({ commodity: '', category: 'Crop', quantity_kg: '', unit_price: '', buyer_id: '' });
       const r = await apiV1('/transactions');
       setTransactions(r.transactions || []);
     } catch (err) { alert(err.message); }
@@ -65,9 +73,17 @@ export default function SHFDashboard({ user }) {
         <form onSubmit={handlePostSell} className="inline-form">
           <h3><Clover size={18} /> Post a harvest for sale</h3>
           <div className="form-grid">
-            <label>Commodity <input value={form.commodity} onChange={(e) => setForm({ ...form, commodity: e.target.value })} placeholder="e.g. Maize" required /></label>
-            <label>Quantity (kg) <input type="number" value={form.quantity_kg} onChange={(e) => setForm({ ...form, quantity_kg: e.target.value })} min={1} required /></label>
-            <label>Unit price (₦/kg) <input type="number" value={form.unit_price} onChange={(e) => setForm({ ...form, unit_price: e.target.value })} min={1} required /></label>
+            <label>
+              Category
+              <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+                <option value="Crop">Crop</option>
+                <option value="Livestock">Livestock</option>
+                <option value="Input">Input</option>
+              </select>
+            </label>
+            <label>Commodity <input value={form.commodity} onChange={(e) => setForm({ ...form, commodity: e.target.value })} placeholder={cfg.placeholder} required /></label>
+            <label>Quantity ({cfg.unit}) <input type="number" value={form.quantity_kg} onChange={(e) => setForm({ ...form, quantity_kg: e.target.value })} min={1} required /></label>
+            <label>Unit price (₦/{cfg.unit}) <input type="number" value={form.unit_price} onChange={(e) => setForm({ ...form, unit_price: e.target.value })} min={1} required /></label>
             <label>Buyer (optional) <input value={form.buyer_id} onChange={(e) => setForm({ ...form, buyer_id: e.target.value })} placeholder="Aggregator actor ID" /></label>
           </div>
           <button className="primary-button" disabled={submitting}>

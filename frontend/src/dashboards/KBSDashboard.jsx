@@ -1,53 +1,108 @@
 import { useEffect, useState } from 'react';
-import { Award, BookOpen, FileText, GraduationCap, Users } from 'lucide-react';
+import { Award, BookOpen, Download, FileText, GraduationCap, Users } from 'lucide-react';
 import { apiV1, money } from '../api';
 import Page, { Loading } from '../components/Page';
 import Metric from '../components/Metric';
 import StatusBadge from '../components/StatusBadge';
 
+const STATUS_OPTIONS = ['all', 'COMPLETED', 'ENROLLED', 'FAILED'];
+const GENDER_OPTIONS = ['all', 'MALE', 'FEMALE', 'OTHER'];
+
 export default function KBSDashboard({ user }) {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [courses, setCourses] = useState([]);
+  const [trainingRecords, setTrainingRecords] = useState([]);
+  const [actors, setActors] = useState([]);
+  const [selectedCourse, setSelectedCourse] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [genderFilter, setGenderFilter] = useState('all');
+  const [showReport, setShowReport] = useState(false);
 
   useEffect(() => {
-    // KBS sees aggregate transaction data for reporting
-    apiV1('/transactions').then((r) => setTransactions(r.transactions || [])).catch(() => {}).finally(() => setLoading(false));
+    Promise.all([
+      apiV1('/transactions').then((r) => r.transactions || []),
+      apiV1('/training-records/courses').then((r) => r.courses || []),
+      apiV1('/training-records').then((r) => r.records || []),
+      apiV1('/actors').then((r) => r.actors || []).catch(() => []),
+    ]).then(([txs, coursesData, records, actorsData]) => {
+      setTransactions(txs);
+      setCourses(coursesData);
+      setTrainingRecords(records);
+      setActors(actorsData);
+    }).catch(() => {}).finally(() => setLoading(false));
   }, []);
+
+  const filteredRecords = trainingRecords.filter((r) =>
+    (selectedCourse === 'all' || r.course_name === selectedCourse) &&
+    (statusFilter === 'all' || r.status === statusFilter) &&
+    (genderFilter === 'all' || r.gender === genderFilter)
+  );
+
+  function exportCSV() {
+    const headers = ['Name', 'Phone', 'Role', 'Gender', 'Course', 'Provider', 'Status', 'LGA', 'State', 'Enrolled'];
+    const rows = filteredRecords.map((r) => [
+      r.full_name,
+      r.phone,
+      r.actor_type,
+      r.gender || 'N/A',
+      r.course_name,
+      r.provider,
+      r.status,
+      r.lga,
+      r.state,
+      new Date(r.created_at).toLocaleDateString('en-NG'),
+    ]);
+    const csv = [headers, ...rows].map((row) => row.map((cell) => `"${cell}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `training-report-${selectedCourse === 'all' ? 'all-courses' : selectedCourse.toLowerCase().replace(/\s+/g, '-')}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   if (loading) return <Loading />;
 
+  // Original KPIs
+  const shfs = actors.filter((a) => a.actor_type === 'SHF');
+  const uniqueFarmers = shfs.length;
   const totalVolume = transactions.reduce((s, t) => s + Number(t.total_amount), 0);
-  const completed = transactions.filter((t) => t.status === 'COMPLETED');
-  const uniqueFarmers = new Set(transactions.map((t) => t.seller_id)).size;
+  const completedTxs = transactions.filter((t) => t.status === 'COMPLETED');
+  const totalCertified = trainingRecords.filter((r) => r.status === 'COMPLETED').length;
+
+  // Training stats
+  const totalEnrolled = trainingRecords.length;
+  const currentlyEnrolled = trainingRecords.filter((r) => r.status === 'ENROLLED').length;
+  const uniqueParticipants = new Set(trainingRecords.map((r) => r.actor_id)).size;
+  const certRate = totalEnrolled ? Math.round((totalCertified / totalEnrolled) * 100) : 0;
 
   return (
     <Page title="KBS Training Hub" subtitle="Digital certification, training records, and performance reports.">
       <div className="metrics-grid">
-        <Metric label="Active participants" value={uniqueFarmers} note="Network-wide" icon={Users} />
+        <Metric label="Active participants" value={uniqueFarmers} note="Registered farmers" icon={Users} />
         <Metric label="Total volume" value={money(totalVolume)} note="All transactions" icon={BookOpen} />
-        <Metric label="Completed deals" value={completed.length} note="Fulfilled" icon={Award} />
-        <Metric label="Certifications" value={0} note="Pending issuance" icon={GraduationCap} />
+        <Metric label="Completed" value={completedTxs.length} note={`${transactions.length ? Math.round((completedTxs.length / transactions.length) * 100) : 0}% rate`} icon={Award} />
+        <Metric label="Certifications" value={totalCertified} note={`${certRate}% of ${totalEnrolled} enrolled`} icon={GraduationCap} />
       </div>
 
       <div className="two-column">
         <section className="panel">
           <div className="panel-head"><div><h2>Training programs</h2><p>Available KBS courses</p></div></div>
           <div className="kbs-courses">
-            {[
-              { name: 'Financial Literacy', provider: 'KBS', type: 'Finance' },
-              { name: 'Climate-Smart Farming', provider: 'KBS', type: 'Agriculture' },
-              { name: 'Digital Marketplace Operations', provider: 'KBS', type: 'Technology' },
-              { name: 'Post-Harvest Management', provider: 'KBS', type: 'Agriculture' },
-            ].map((c) => (
-              <div key={c.name} className="course-card">
+            {courses.length > 0 ? courses.map((c) => (
+              <div key={c.course_name} className="course-card">
                 <div className="course-icon"><BookOpen size={20} /></div>
                 <div>
-                  <strong>{c.name}</strong>
-                  <span>{c.provider} · {c.type}</span>
+                  <strong>{c.course_name}</strong>
+                  <span>{c.provider} · {Number(c.total_enrolled)} enrolled · {Number(c.completed)} certified</span>
                 </div>
                 <button className="secondary-button sm">Enroll</button>
               </div>
-            ))}
+            )) : (
+              <p className="muted-text" style={{ padding: 16 }}>No training data yet. Enroll farmers to get started.</p>
+            )}
           </div>
         </section>
 
@@ -56,15 +111,99 @@ export default function KBSDashboard({ user }) {
           <div className="allocation" style={{ flexDirection: 'column', display: 'flex' }}>
             <div><span>Total transaction value</span><strong>{money(totalVolume)}</strong><small>{transactions.length} transactions</small></div>
             <div><span>Average deal size</span><strong>{money(transactions.length ? totalVolume / transactions.length : 0)}</strong><small>Per transaction</small></div>
-            <div><span>Completion rate</span><strong>{transactions.length ? Math.round((completed.length / transactions.length) * 100) : 0}%</strong><small>{completed.length} of {transactions.length} completed</small></div>
+            <div><span>Completion rate</span><strong>{transactions.length ? Math.round((completedTxs.length / transactions.length) * 100) : 0}%</strong><small>{completedTxs.length} of {transactions.length} completed</small></div>
           </div>
         </section>
       </div>
 
+      <div className="metrics-grid" style={{ marginTop: 20 }}>
+        <Metric label="Total enrollments" value={totalEnrolled} note="Across all courses" icon={BookOpen} />
+        <Metric label="Active learners" value={currentlyEnrolled} note="Currently enrolled" icon={Users} />
+        <Metric label="Certified" value={totalCertified} note={`${certRate}% certification rate`} icon={Award} />
+        <Metric label="Unique participants" value={uniqueParticipants} note={`${courses.length} active courses`} icon={GraduationCap} />
+      </div>
+
+      <section className="panel" style={{ marginTop: 20 }}>
+        <div className="panel-head">
+          <div><h2>Training reports</h2><p>Generate reports by course, status, and demographics</p></div>
+          <button className="secondary-button" onClick={() => setShowReport(!showReport)}>
+            <FileText size={16} /> {showReport ? 'Hide report' : 'Generate report'}
+          </button>
+        </div>
+        {showReport && (
+          <div style={{ padding: '0 20px 20px' }}>
+            <div style={{ display: 'flex', gap: 12, marginBottom: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span>Course:</span>
+                <select value={selectedCourse} onChange={(e) => setSelectedCourse(e.target.value)} style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid var(--border)' }}>
+                  <option value="all">All courses</option>
+                  {courses.map((c) => (
+                    <option key={c.course_name} value={c.course_name}>{c.course_name}</option>
+                  ))}
+                </select>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span>Status:</span>
+                <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid var(--border)' }}>
+                  {STATUS_OPTIONS.map((s) => (
+                    <option key={s} value={s}>{s === 'all' ? 'All statuses' : s.charAt(0) + s.slice(1).toLowerCase()}</option>
+                  ))}
+                </select>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span>Gender:</span>
+                <select value={genderFilter} onChange={(e) => setGenderFilter(e.target.value)} style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid var(--border)' }}>
+                  {GENDER_OPTIONS.map((g) => (
+                    <option key={g} value={g}>{g === 'all' ? 'All genders' : g.charAt(0) + g.slice(1).toLowerCase()}</option>
+                  ))}
+                </select>
+              </label>
+              <button className="primary-button" onClick={exportCSV}>
+                <Download size={16} /> Export CSV
+              </button>
+            </div>
+            <p className="muted-text" style={{ marginBottom: 12 }}>
+              Showing {filteredRecords.length} record{filteredRecords.length !== 1 ? 's' : ''}
+            </p>
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Phone</th>
+                    <th>Role</th>
+                    <th>Gender</th>
+                    <th>Course</th>
+                    <th>Status</th>
+                    <th>LGA</th>
+                    <th>Enrolled</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredRecords.length === 0 ? (
+                    <tr><td colSpan={8} style={{ textAlign: 'center', padding: 20 }} className="muted-text">No records match the selected filters</td></tr>
+                  ) : filteredRecords.map((r) => (
+                    <tr key={r.record_id}>
+                      <td><strong>{r.full_name}</strong></td>
+                      <td>{r.phone}</td>
+                      <td><span className="role-chip">{r.actor_type}</span></td>
+                      <td>{r.gender || 'N/A'}</td>
+                      <td>{r.course_name}</td>
+                      <td><StatusBadge status={r.status} /></td>
+                      <td>{r.lga}</td>
+                      <td>{new Date(r.created_at).toLocaleDateString('en-NG', { day: '2-digit', month: 'short' })}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </section>
+
       <section className="panel" style={{ marginTop: 20 }}>
         <div className="panel-head">
           <div><h2>Recent activity</h2><p>Latest transactions across the network</p></div>
-          <button className="secondary-button"><FileText size={16} /> Generate report</button>
         </div>
         <div className="table-wrap">
           <table>

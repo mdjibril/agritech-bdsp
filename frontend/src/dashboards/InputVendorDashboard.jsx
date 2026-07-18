@@ -9,7 +9,7 @@ export default function InputVendorDashboard({ user }) {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ commodity: '', quantity_kg: '', unit_price: '', buyer_id: '' });
+  const [form, setForm] = useState({ commodity: '', category: 'Input', quantity_kg: '', unit_price: '', buyer_id: '' });
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
