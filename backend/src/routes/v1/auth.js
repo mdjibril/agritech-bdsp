@@ -2,7 +2,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const { query, transaction } = require('../../db');
 const { requireFields, assertOneOf, VALID_ACTOR_TYPES, VALID_GENDERS } = require('../../validation');
-const { requireAuth, signToken } = require('../../middleware/auth');
+const { requireAuth, requireRole, signToken } = require('../../middleware/auth');
 const { requireNpdcConsent } = require('../../middleware/ndpcConsent');
 const { generateOtp, verifyOtp } = require('../../services/otpStore');
 const { badRequest } = require('../../httpError');
@@ -42,7 +42,7 @@ router.post('/register', requireNpdcConsent, async (req, res, next) => {
     const result = await query(
       `INSERT INTO actors (phone, password_hash, full_name, actor_type, channel, bank_name, account_number, gender, lga, state, kyc_status, bdsp_id)
        VALUES ($1, $2, $3, $4, COALESCE($5, 'WEB'), $6, $7, $8, COALESCE($9, 'Chikun'), COALESCE($10, 'Kaduna'), 'PENDING', $11)
-       RETURNING actor_id, phone, full_name, actor_type, channel, bank_name, account_number, kyc_status, gender, bdsp_id, wallet_balance, lga, state, created_at`,
+       RETURNING actor_id, phone, full_name, actor_type, channel, bank_name, account_number, kyc_status, gender, bdsp_id, wallet_balance, lga, state, created_at, is_platform`,
       [req.body.phone, password_hash, req.body.full_name, req.body.actor_type,
        req.body.channel, req.body.bank_name, req.body.account_number,
        req.body.gender, req.body.lga, req.body.state, bdsp_id]
@@ -60,12 +60,41 @@ router.post('/register', requireNpdcConsent, async (req, res, next) => {
   }
 });
 
+// POST /api/v1/auth/enroll-farmer
+// BDSP-only: enroll a farmer under their network
+router.post('/enroll-farmer', requireAuth, requireRole('BDSP'), async (req, res, next) => {
+  try {
+    requireFields(req.body, 'phone', 'password', 'full_name', 'gender');
+    assertOneOf(req.body.gender, VALID_GENDERS, 'gender');
+
+    const password_hash = await bcrypt.hash(req.body.password, 12);
+
+    const result = await query(
+      `INSERT INTO actors (phone, password_hash, full_name, actor_type, channel, bank_name, account_number, gender, lga, state, kyc_status, bdsp_id)
+       VALUES ($1, $2, $3, 'SHF', COALESCE($4, 'WEB'), $5, $6, $7, COALESCE($8, 'Chikun'), COALESCE($9, 'Kaduna'), 'PENDING', $10)
+       RETURNING actor_id, phone, full_name, actor_type, channel, bank_name, account_number, kyc_status, gender, bdsp_id, wallet_balance, lga, state, created_at, is_platform`,
+      [req.body.phone, password_hash, req.body.full_name,
+       req.body.channel || 'WEB', req.body.bank_name || 'Pending', req.body.account_number || '0000000000',
+       req.body.gender, req.body.lga, req.body.state, req.user.actor_id]
+    );
+
+    const farmer = result.rows[0];
+    res.locals.auditAction = `BDSP ${req.user.actor_id} enrolled farmer ${farmer.actor_id}`;
+    res.status(201).json({ farmer, message: 'Farmer enrolled under your network' });
+  } catch (err) {
+    if (err.code === '23505' && err.constraint === 'actors_phone_key') {
+      return next(badRequest('Phone number already registered'));
+    }
+    next(err);
+  }
+});
+
 // POST /api/v1/auth/login
 router.post('/login', async (req, res, next) => {
   try {
     requireFields(req.body, 'phone', 'password');
     const result = await query(
-      'SELECT actor_id, phone, password_hash, full_name, actor_type, channel, bank_name, account_number, kyc_status, gender, bdsp_id, wallet_balance, lga, state, created_at FROM actors WHERE phone = $1',
+      'SELECT actor_id, phone, password_hash, full_name, actor_type, channel, bank_name, account_number, kyc_status, gender, bdsp_id, wallet_balance, lga, state, created_at, is_platform FROM actors WHERE phone = $1',
       [req.body.phone]
     );
     if (!result.rows.length) return next(badRequest('Invalid phone or password'));

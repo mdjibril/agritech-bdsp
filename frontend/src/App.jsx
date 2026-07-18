@@ -6,6 +6,7 @@ import {
   Shield, Users,
 } from 'lucide-react';
 import { api, apiV1, money } from './api';
+import { displayUnit } from './utils';
 import DealsView from './DealsView';
 import BrandHeader from './components/BrandHeader';
 import RegisterForm from './components/RegisterForm';
@@ -397,7 +398,7 @@ function MarketplaceView({ user }) {
                 {recentDeals.map((d) => (
                   <tr key={d.tx_id}>
                     <td><strong>{d.commodity}</strong></td>
-                    <td>{Number(d.quantity_kg)} kg</td>
+                    <td>{Number(d.quantity_kg).toLocaleString()} {displayUnit(d.category)}</td>
                     <td>{money(d.total_amount)}</td>
                     <td>{d.seller_name}</td>
                     <td>{d.buyer_name}</td>
@@ -422,8 +423,8 @@ function MarketplaceView({ user }) {
               </div>
               <div>
                 <h3>{listing.commodity}</h3>
-                <strong className="price">{money(listing.unit_price)} <small>/ kg</small></strong>
-                <p style={{ marginTop: 4 }}>{Number(listing.quantity_kg).toLocaleString()} kg {tab === 'sell' ? 'available' : 'wanted'}</p>
+                <strong className="price">{money(listing.unit_price)} <small>/ {displayUnit(listing.category)}</small></strong>
+                <p style={{ marginTop: 4 }}>{Number(listing.quantity_kg).toLocaleString()} {displayUnit(listing.category)} {tab === 'sell' ? 'available' : 'wanted'}</p>
               </div>
               <dl>
                 <div><dt>Total value</dt><dd>{money(listing.total_amount)}</dd></div>

@@ -10,7 +10,7 @@ const router = express.Router();
 // Map actor to old frontend user shape
 function mapUser(actor) {
   return {
-    user_id: `ACT_${String(actor.actor_id).padStart(3, '0')}`,
+    user_id: actor.actor_id,
     phone: actor.phone,
     full_name: actor.full_name,
     primary_role: actor.actor_type,
@@ -18,9 +18,7 @@ function mapUser(actor) {
     gender: actor.gender ? actor.gender.charAt(0).toUpperCase() + actor.gender.slice(1).toLowerCase() : 'Other',
     lga: actor.lga,
     ward: actor.lga,
-    crops: actor.actor_type === 'SHF' ? ['Maize', 'Soybean'] : [],
-    livestock: actor.actor_type === 'SHF' ? ['Goats', 'Poultry'] : [],
-    inputs_sold: actor.actor_type === 'INPUT_VENDOR' ? ['NPK', 'Seed'] : [],
+    commodities: [],
     ndpc_consent: true,
     onboarded_by: 'Self',
   };

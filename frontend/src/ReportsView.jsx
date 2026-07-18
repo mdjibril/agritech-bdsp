@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { BarChart3, Download, FileText, GraduationCap, LoaderCircle, PackageOpen, TrendingUp, Users, DollarSign, Shield } from 'lucide-react';
 import { apiV1, money } from './api';
+import { displayUnit } from './utils';
 import Page, { Loading, Empty } from './components/Page';
 import StatusBadge from './components/StatusBadge';
 
@@ -104,7 +105,7 @@ export default function ReportsView({ user }) {
             <button className="secondary-button sm" onClick={() => downloadCsv('completed-transactions.csv', csv(data.transactions, [
               { label: 'ID', get: (r) => r.tx_id },
               { label: 'Commodity', get: (r) => r.commodity },
-              { label: 'Quantity (kg)', get: (r) => r.quantity_kg },
+              { label: 'Quantity', get: (r) => r.quantity_kg },
               { label: 'Total Amount', get: (r) => r.total_amount },
               { label: 'Buyer', get: (r) => r.buyer_name },
               { label: 'Seller', get: (r) => r.seller_name },
@@ -129,7 +130,7 @@ export default function ReportsView({ user }) {
                     <tr key={t.tx_id}>
                       <td><strong>#{t.tx_id}</strong></td>
                       <td>{t.commodity}</td>
-                      <td>{Number(t.quantity_kg).toLocaleString()} kg</td>
+                      <td>{Number(t.quantity_kg).toLocaleString()} {displayUnit(t.category)}</td>
                       <td>{money(t.total_amount)}</td>
                       <td>{t.buyer_name}</td>
                       <td>{t.seller_name}</td>

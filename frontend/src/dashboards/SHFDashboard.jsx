@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ArrowUpRight, Clover, DollarSign, Layers, PackageOpen, Plus, Sprout, Wallet } from 'lucide-react';
 import { api, apiV1, money } from '../api';
+import { displayUnit } from '../utils';
 import Page, { Loading, Empty } from '../components/Page';
 import Metric from '../components/Metric';
 
@@ -97,12 +98,12 @@ export default function SHFDashboard({ user }) {
         {sold.length === 0 ? <Empty /> : (
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Commodity</th><th>Qty (kg)</th><th>Unit price</th><th>Total</th><th>Status</th><th>Date</th></tr></thead>
+              <thead><tr><th>Commodity</th><th>Qty</th><th>Unit price</th><th>Total</th><th>Status</th><th>Date</th></tr></thead>
               <tbody>
                 {sold.map((t) => (
                   <tr key={t.tx_id}>
                     <td><strong>{t.commodity}</strong></td>
-                    <td>{t.quantity_kg}</td>
+                    <td>{Number(t.quantity_kg).toLocaleString()} {displayUnit(t.category)}</td>
                     <td>{money(t.unit_price)}</td>
                     <td>{money(t.total_amount)}</td>
                     <td><span className={`status-badge ${t.status === 'COMPLETED' ? 'success' : t.status === 'INITIATED' ? 'warning' : 'info'}`}>{t.status}</span></td>

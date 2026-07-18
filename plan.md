@@ -177,7 +177,56 @@
 
 ---
 
-## Phase 7: Validation, Compliance, & Production Hardening
+## Phase 7: V4V MARKETPLACE: FINANCIAL & COMMISSION MECHANICS
+
+## 1. Commodity Sales (Crop Trading)
+Applied when a crop is successfully sold and dual-lock Proof of Delivery (POD) is confirmed.
+
+*   **Total Platform Deduction:** 2% of the total crop value.
+*   **Distribution of the 2% Deduction:**
+    *   **V4V Platform:** 70% 
+    *   **BDSP (Onboarding Agent):** 30%
+*   **Seller Payout:** The seller (e.g., SHF) receives the remaining 98% of the crop value.
+
+**Example: 500,000 NGN Crop Sale**
+*   Total Fee (2%): 10,000 NGN
+*   V4V Share (70% of fee): 7,000 NGN
+*   BDSP Share (30% of fee): 3,000 NGN
+*   Seller Payout: 490,000 NGN
+
+---
+
+## 2. Logistics & Freight (Transport)
+Applied to the transport fee negotiated between the buyer (Aggregator) and the Logistics Partner.
+
+*   **Total Platform Deduction:** 0% (Platform takes no cut to drive early adoption).
+*   **Distribution:**
+    *   **V4V Platform:** 0%
+    *   **Logistics Partner (Trucker):** 100% of the negotiated logistics fee.
+*   **Payment Flow:** The buyer funds the escrow with the combined total `(Crop Price + Logistics Fee)`. Upon Dual-POD confirmation, the full logistics fee is routed directly to the Trucker's bank account.
+
+**Example: 50,000 NGN Freight Job**
+*   Total Fee (0%): 0 NGN
+*   Logistics Partner Payout: 50,000 NGN
+
+---
+
+## 3. Digital Insurance Premiums
+Applied when an actor (SHF, Aggregator, etc.) purchases a standalone crop, livestock, or equipment insurance policy.
+
+*   **Total Platform Deduction:** 12% of the total premium cost.
+*   **Distribution:**
+    *   **V4V Platform:** 12% flat commission.
+    *   **Insurance Provider (NAIC/AXA):** 88% of the premium.
+
+**Example: 50,000 NGN Insurance Premium**
+*   Total Fee (12%): 6,000 NGN
+*   V4V Share: 6,000 NGN
+*   Insurance Provider Payout: 44,000 NGN
+
+---
+
+## Phase 8: Validation, Compliance, & Production Hardening
 *Objective: Run multi-channel verification tests and extract compliance audit trails.*
 
 - [ ] **Task 7.0 (Git Workflow):** Create and checkout a new isolated stabilization and hardening branch:

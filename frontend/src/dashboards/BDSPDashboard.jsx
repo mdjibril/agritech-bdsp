@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
-import { ArrowDownLeft, BarChart3, Network, PackageOpen, Plus, Search, ShoppingCart, Users, WalletCards } from 'lucide-react';
+import { ArrowDownLeft, BarChart3, Network, PackageOpen, Plus, Search, ShoppingCart, UserPlus, Users, WalletCards } from 'lucide-react';
 import { api, apiV1, money } from '../api';
 import Page, { Loading, Empty } from '../components/Page';
 import Metric from '../components/Metric';
 import PanelHead from '../components/PanelHead';
+
+const GENDERS = ['MALE', 'FEMALE', 'OTHER'];
 
 export default function BDSPDashboard({ user }) {
   const [data, setData] = useState(null);
@@ -12,6 +14,10 @@ export default function BDSPDashboard({ user }) {
   const [showBuyForm, setShowBuyForm] = useState(false);
   const [buyForm, setBuyForm] = useState({ commodity: '', category: 'Crop', quantity_kg: '', unit_price: '' });
   const [buySubmitting, setBuySubmitting] = useState(false);
+  const [showEnrollForm, setShowEnrollForm] = useState(false);
+  const [enrollForm, setEnrollForm] = useState({ full_name: '', phone: '', password: '', gender: 'MALE', area: '' });
+  const [enrollSubmitting, setEnrollSubmitting] = useState(false);
+  const [enrollMessage, setEnrollMessage] = useState('');
 
   const categoryConfig = {
     Crop:     { unit: 'kg',     placeholder: 'e.g. Maize' },
@@ -40,6 +46,33 @@ export default function BDSPDashboard({ user }) {
     finally { setBuySubmitting(false); }
   }
 
+  async function handleEnroll(e) {
+    e.preventDefault();
+    setEnrollSubmitting(true);
+    setEnrollMessage('');
+    try {
+      const r = await apiV1('/auth/enroll-farmer', {
+        method: 'POST',
+        body: JSON.stringify({
+          full_name: enrollForm.full_name,
+          phone: enrollForm.phone,
+          password: enrollForm.password,
+          gender: enrollForm.gender,
+          bank_name: 'Not provided',
+          account_number: '0000000000',
+          lga: enrollForm.area || 'Chikun',
+          state: 'Kaduna',
+        }),
+      });
+      setEnrollMessage(`Farmer enrolled: ${r.farmer.full_name} (ID: ${r.farmer.actor_id})`);
+      setEnrollForm({ full_name: '', phone: '', password: '', gender: 'MALE', area: '' });
+      setShowEnrollForm(false);
+      // Refresh network data
+      api('/bdsp/network').then(setData).catch(() => {});
+    } catch (err) { setEnrollMessage(`Error: ${err.message}`); }
+    finally { setEnrollSubmitting(false); }
+  }
+
   useEffect(() => {
     api('/bdsp/network').then(setData).catch(() => {}).finally(() => setLoading(false));
   }, []);
@@ -48,19 +81,26 @@ export default function BDSPDashboard({ user }) {
   if (!data) return <Empty />;
 
   const metrics = data.metrics;
-  const active = metrics?.post_summary?.filter((p) => p.status === 'Active').reduce((sum, p) => sum + p.count, 0) || 0;
+  const active = metrics?.active_listings || 0;
   const gender = metrics?.gender_counts || {};
   const total = metrics?.member_count || 1;
   const members = (data.members || []).filter((m) =>
-    `${m.full_name} ${m.user_id} ${m.primary_role} ${m.ward}`.toLowerCase().includes(query.toLowerCase())
+    `${m.full_name} ${m.user_id} ${m.primary_role} ${m.ward} ${(m.commodities || []).join(' ')}`.toLowerCase().includes(query.toLowerCase())
   );
 
   return (
-    <Page title="BDSP Network" subtitle="Your downline network overview — members, commissions, and KPIs."
+    <Page title="BDSP Network" subtitle={`${user.is_platform ? 'Platform BDSP — all self-enrolled farmers land here' : 'Your downline network — members, commissions, and KPIs.'}`}
       action={
-        <button className="primary-button" onClick={() => setShowBuyForm(!showBuyForm)}>
-          <Plus size={18} /> {showBuyForm ? 'Cancel' : 'Post buy request'}
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {!user.is_platform && (
+            <button className="secondary-button" onClick={() => setShowEnrollForm(!showEnrollForm)}>
+              <UserPlus size={18} /> {showEnrollForm ? 'Cancel' : 'Enroll farmer'}
+            </button>
+          )}
+          <button className="primary-button" onClick={() => setShowBuyForm(!showBuyForm)}>
+            <Plus size={18} /> {showBuyForm ? 'Cancel' : 'Post buy request'}
+          </button>
+        </div>
       }
     >
       {showBuyForm && (
@@ -81,6 +121,30 @@ export default function BDSPDashboard({ user }) {
           </div>
           <button className="primary-button" disabled={buySubmitting}>
             {buySubmitting ? 'Posting...' : <><ArrowDownLeft size={18} /> Post buy request</>}
+          </button>
+        </form>
+      )}
+      {showEnrollForm && (
+        <form onSubmit={handleEnroll} className="inline-form">
+          <h3><UserPlus size={18} /> Enroll a farmer under your network</h3>
+          <div className="form-grid">
+            <label>Full name <input value={enrollForm.full_name} onChange={(e) => setEnrollForm({ ...enrollForm, full_name: e.target.value })} placeholder="e.g. Chukwuma Okeke" required /></label>
+            <label>Phone <input value={enrollForm.phone} onChange={(e) => setEnrollForm({ ...enrollForm, phone: e.target.value })} placeholder="+234..." required /></label>
+            <label>Password <input type="password" value={enrollForm.password} onChange={(e) => setEnrollForm({ ...enrollForm, password: e.target.value })} placeholder="Set a password" required /></label>
+            <label>Gender
+              <select value={enrollForm.gender} onChange={(e) => setEnrollForm({ ...enrollForm, gender: e.target.value })}>
+                {GENDERS.map((g) => <option key={g}>{g}</option>)}
+              </select>
+            </label>
+            <label>Area/LGA (optional) <input value={enrollForm.area} onChange={(e) => setEnrollForm({ ...enrollForm, area: e.target.value })} placeholder="e.g. Chikun" /></label>
+          </div>
+          {enrollMessage && (
+            <div className={enrollMessage.startsWith('Error') ? 'error-banner' : 'release-banner'} style={{ marginBottom: 12 }}>
+              {enrollMessage}
+            </div>
+          )}
+          <button className="primary-button" disabled={enrollSubmitting}>
+            {enrollSubmitting ? 'Enrolling...' : <><UserPlus size={18} /> Enroll farmer</>}
           </button>
         </form>
       )}
@@ -127,11 +191,11 @@ export default function BDSPDashboard({ user }) {
               <tbody>
                 {members.map((m) => (
                   <tr key={m.user_id}>
-                    <td><strong>{m.full_name}</strong><span>{m.user_id}</span></td>
+                    <td><strong>{m.full_name}</strong><span>ID: {m.user_id}</span></td>
                     <td><span className="role-chip">{m.primary_role}</span></td>
                     <td>{m.gender}</td>
                     <td>{m.ward || 'Not set'}</td>
-                    <td>{[...(m.crops || []), ...(m.livestock || []), ...(m.inputs_sold || [])].slice(0, 2).join(', ') || 'Not specified'}</td>
+                    <td>{(m.commodities || []).slice(0, 3).join(', ') || 'No activity yet'}</td>
                     <td>{new Date(m.joined_at).toLocaleDateString('en-NG', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
                   </tr>
                 ))}

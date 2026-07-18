@@ -24,8 +24,39 @@ router.get('/network', requireAuth, async (req, res, next) => {
       gender_counts[g] = (gender_counts[g] || 0) + 1;
     }
 
-    // Commission ledger from linked sellers' transactions
     const sellerIds = members.rows.map(m => m.actor_id);
+
+    // Real commodity data: get distinct commodities each SHF has traded
+    let commoditiesByActor = {};
+    if (sellerIds.length) {
+      const commResult = await query(
+        `SELECT seller_id, commodity, COUNT(*)::int AS tx_count
+         FROM transactions WHERE seller_id = ANY($1::int[]) GROUP BY seller_id, commodity
+         ORDER BY seller_id, tx_count DESC`,
+        [sellerIds]
+      );
+      for (const row of commResult.rows) {
+        if (!commoditiesByActor[row.seller_id]) commoditiesByActor[row.seller_id] = [];
+        commoditiesByActor[row.seller_id].push(row.commodity);
+      }
+    }
+
+    // Real listing counts per SHF
+    let listingCounts = {};
+    if (sellerIds.length) {
+      const listResult = await query(
+        `SELECT seller_id, COUNT(*)::int AS active_count
+         FROM transactions WHERE seller_id = ANY($1::int[])
+         AND status IN ('LISTED', 'INITIATED', 'IN_ESCROW', 'DISPATCHED') GROUP BY seller_id`,
+        [sellerIds]
+      );
+      for (const row of listResult.rows) {
+        listingCounts[row.seller_id] = row.active_count;
+      }
+    }
+    const totalActive = Object.values(listingCounts).reduce((s, c) => s + c, 0);
+
+    // Commission ledger from linked sellers' transactions
     let commission_ledger = {
       total_deal_value: 0, deal_count: 0,
       total_v4v_revenue: 0, total_bdsp_commission: 0,
@@ -45,27 +76,23 @@ router.get('/network', requireAuth, async (req, res, next) => {
 
     res.json({
       members: members.rows.map(m => ({
-        network_id: `NET_${String(m.actor_id).padStart(3, '0')}`,
-        user_id: `ACT_${String(m.actor_id).padStart(3, '0')}`,
+        user_id: m.actor_id,
         full_name: m.full_name,
         phone: m.phone,
         primary_role: m.actor_type,
-        secondary_roles: [],
         is_bdsp: m.actor_type === 'BDSP',
         gender: m.gender ? m.gender.charAt(0).toUpperCase() + m.gender.slice(1).toLowerCase() : 'Other',
         lga: m.lga,
         ward: m.lga,
-        crops: m.actor_type === 'SHF' ? ['Maize', 'Soybean'] : [],
-        livestock: m.actor_type === 'SHF' ? ['Goats', 'Poultry'] : [],
-        inputs_sold: m.actor_type === 'INPUT_VENDOR' ? ['NPK', 'Seed'] : [],
+        kyc_status: m.kyc_status,
+        commodities: commoditiesByActor[m.actor_id] || [],
+        listing_count: listingCounts[m.actor_id] || 0,
         joined_at: m.created_at,
       })),
       metrics: {
         member_count: members.rows.length,
         gender_counts,
-        post_summary: [
-          { status: 'Active', category: 'Crop', count: sellerIds.length > 0 ? 1 : 0 },
-        ],
+        active_listings: totalActive,
         commission_ledger,
       },
     });

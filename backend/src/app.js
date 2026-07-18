@@ -15,6 +15,7 @@ const v1EscrowRoutes = require('./routes/v1/escrow');
 const v1DocumentRoutes = require('./routes/v1/documents');
 const v1ReportRoutes = require('./routes/v1/reports');
 const v1TrainingRoutes = require('./routes/v1/training');
+const v1InsuranceRoutes = require('./routes/v1/insurance');
 const v1MockRoutes = require('./routes/v1/mocks');
 
 // Backward-compatibility shim routes (legacy frontend expects these)
@@ -54,6 +55,7 @@ app.use('/api/v1/documents', v1DocumentRoutes);
 app.use('/api/v1/reports', v1ReportRoutes);
 app.use('/api/v1/training-records', v1TrainingRoutes);
 app.use('/api/v1/mocks', v1MockRoutes);
+app.use('/api/v1/insurance', v1InsuranceRoutes);
 
 // Backward-compatibility shims (also under /api for production without Vite proxy)
 app.use('/auth', shimAuthRoutes);

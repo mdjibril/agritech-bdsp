@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowDownLeft, Package, Plus, Search, ShoppingCart, Truck, Users, Wallet } from 'lucide-react';
 import { apiV1, money } from '../api';
+import { displayUnit } from '../utils';
 import Page, { Loading, Empty } from '../components/Page';
 import Metric from '../components/Metric';
 import StatusBadge from '../components/StatusBadge';
@@ -104,7 +105,7 @@ export default function AggregatorDashboard({ user }) {
                 {filtered.map((t) => (
                   <tr key={t.tx_id}>
                     <td><strong>{t.commodity}</strong></td>
-                    <td>{t.quantity_kg} kg</td>
+                    <td>{Number(t.quantity_kg).toLocaleString()} {displayUnit(t.category)}</td>
                     <td>{money(t.total_amount)}</td>
                     <td>{t.seller_name || `#${t.seller_id}`}</td>
                     <td><StatusBadge status={t.status} /></td>

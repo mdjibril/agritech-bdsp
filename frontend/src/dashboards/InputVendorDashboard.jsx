@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Bell, ClipboardList, Package, PackageOpen, Plus, Search, Sprout, Wallet } from 'lucide-react';
 import { apiV1, money } from '../api';
+import { displayUnit } from '../utils';
 import Page, { Loading, Empty } from '../components/Page';
 import Metric from '../components/Metric';
 import StatusBadge from '../components/StatusBadge';
@@ -66,7 +67,7 @@ export default function InputVendorDashboard({ user }) {
           <h3><Package size={18} /> List input product</h3>
           <div className="form-grid">
             <label>Product name <input value={form.commodity} onChange={(e) => setForm({ ...form, commodity: e.target.value })} placeholder="e.g. NPK Fertilizer" required /></label>
-            <label>Quantity (kg) <input type="number" value={form.quantity_kg} onChange={(e) => setForm({ ...form, quantity_kg: e.target.value })} min={1} required /></label>
+            <label>Quantity (bags) <input type="number" value={form.quantity_kg} onChange={(e) => setForm({ ...form, quantity_kg: e.target.value })} min={1} required /></label>
             <label>Unit price (₦/kg) <input type="number" value={form.unit_price} onChange={(e) => setForm({ ...form, unit_price: e.target.value })} min={1} required /></label>
             <label>Buyer (optional) <input value={form.buyer_id} onChange={(e) => setForm({ ...form, buyer_id: e.target.value })} placeholder="Buyer actor ID" /></label>
           </div>
@@ -84,7 +85,7 @@ export default function InputVendorDashboard({ user }) {
                 {sold.map((t) => (
                   <tr key={t.tx_id}>
                     <td><strong>{t.commodity}</strong></td>
-                    <td>{t.quantity_kg} kg</td>
+                    <td>{Number(t.quantity_kg).toLocaleString()} {displayUnit(t.category)}</td>
                     <td>{money(t.total_amount)}</td>
                     <td>{t.buyer_name || `#${t.buyer_id}`}</td>
                     <td><StatusBadge status={t.status} /></td>

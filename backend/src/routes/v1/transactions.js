@@ -12,7 +12,7 @@ const TX_SELECT = `
          t.commodity, t.quantity_kg, t.unit_price, t.total_amount,
          t.status, t.trucker_pod_confirmed, t.buyer_pod_confirmed,
          t.escrow_required, t.commission_v4v, t.commission_bdsp,
-         t.category,
+         t.category, t.logistics_fee,
          t.created_at, t.updated_at,
          buyer.full_name AS buyer_name,
          seller.full_name AS seller_name,
@@ -79,11 +79,13 @@ router.post('/', requireAuth, async (req, res, next) => {
       const buyId = hasBuyer ? Number(req.body.buyer_id) : null;
       const sellId = hasSeller ? Number(req.body.seller_id) : null;
 
+      const logisticsFee = Number(req.body.logistics_fee || 0);
+
       const tx = await client.query(
-        `INSERT INTO transactions (buyer_id, seller_id, logistics_id, commodity, category, quantity_kg, unit_price)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
+        `INSERT INTO transactions (buyer_id, seller_id, logistics_id, commodity, category, quantity_kg, unit_price, logistics_fee)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
          RETURNING *`,
-        [buyId, sellId, logisticsId, req.body.commodity, req.body.category || 'Crop', req.body.quantity_kg, req.body.unit_price]
+        [buyId, sellId, logisticsId, req.body.commodity, req.body.category || 'Crop', req.body.quantity_kg, req.body.unit_price, logisticsFee]
       );
       const txn = tx.rows[0];
 
@@ -101,11 +103,12 @@ router.post('/', requireAuth, async (req, res, next) => {
         return txn;
       }
 
-      // Direct deal: escrow if needed
+      // Direct deal: escrow if needed (holds crop value + logistics fee)
       if (txn.escrow_required) {
+        const escrowAmount = Number(txn.total_amount) + logisticsFee;
         await client.query(
           "INSERT INTO escrow (tx_id, amount, funded_by, status) VALUES ($1, $2, $3, 'HELD')",
-          [txn.tx_id, txn.total_amount, txn.buyer_id]
+          [txn.tx_id, escrowAmount, txn.buyer_id]
         );
         await client.query("UPDATE transactions SET status = 'IN_ESCROW' WHERE tx_id = $1", [txn.tx_id]);
         txn.status = 'IN_ESCROW';
@@ -207,9 +210,10 @@ router.put('/:id/claim', requireAuth, async (req, res, next) => {
       );
 
       if (tx.escrow_required) {
+        const escrowAmount = Number(tx.total_amount) + Number(tx.logistics_fee || 0);
         await client.query(
           "INSERT INTO escrow (tx_id, amount, funded_by, status) VALUES ($1, $2, $3, 'HELD')",
-          [tx.tx_id, tx.total_amount, req.user.actor_id]
+          [tx.tx_id, escrowAmount, req.user.actor_id]
         );
       }
 
@@ -255,9 +259,10 @@ router.put('/:id/offer', requireAuth, async (req, res, next) => {
       );
 
       if (tx.escrow_required) {
+        const escrowAmount = Number(tx.total_amount) + Number(tx.logistics_fee || 0);
         await client.query(
           "INSERT INTO escrow (tx_id, amount, funded_by, status) VALUES ($1, $2, $3, 'HELD')",
-          [tx.tx_id, tx.total_amount, tx.buyer_id]
+          [tx.tx_id, escrowAmount, tx.buyer_id]
         );
       }
 
@@ -300,7 +305,7 @@ router.post('/:id/confirm-pod', requireAuth, async (req, res, next) => {
       res.locals.auditAction = `Buyer confirmed POD for transaction ${tx.tx_id}`;
     }
 
-    // Check if both confirmed — atomic release
+    // Check if both confirmed — atomic release with commission distribution
     const updated = (await query('SELECT * FROM transactions WHERE tx_id = $1', [tx.tx_id])).rows[0];
     if (updated.trucker_pod_confirmed && updated.buyer_pod_confirmed) {
       await transaction(async (client) => {
@@ -313,13 +318,50 @@ router.post('/:id/confirm-pod', requireAuth, async (req, res, next) => {
           [tx.tx_id]
         );
         if (escrowResult.rows.length) {
-          await client.query(
-            'UPDATE actors SET wallet_balance = wallet_balance + $1 WHERE actor_id = (SELECT seller_id FROM transactions WHERE tx_id = $2)',
-            [escrowResult.rows[0].amount, tx.tx_id]
-          );
+          const escrowAmount = Number(escrowResult.rows[0].amount);
+          const v4vComm = Number(updated.commission_v4v || 0);
+          const bdspComm = Number(updated.commission_bdsp || 0);
+          const logisticsFee = Number(updated.logistics_fee || 0);
+
+          // Seller payout: escrow - commissions - logistics
+          const sellerPayout = escrowAmount - v4vComm - bdspComm - logisticsFee;
+          if (sellerPayout > 0) {
+            await client.query(
+              'UPDATE actors SET wallet_balance = wallet_balance + $1 WHERE actor_id = $2',
+              [sellerPayout, updated.seller_id]
+            );
+          }
+
+          // V4V Platform BDSP (actor_id=1): gets commission_v4v
+          if (v4vComm > 0) {
+            await client.query(
+              'UPDATE actors SET wallet_balance = wallet_balance + $1 WHERE actor_id = 1',
+              [v4vComm]
+            );
+          }
+
+          // Seller's BDSP: gets commission_bdsp
+          if (bdspComm > 0) {
+            const seller = await client.query('SELECT bdsp_id FROM actors WHERE actor_id = $1', [updated.seller_id]);
+            const bdspId = seller.rows[0]?.bdsp_id;
+            if (bdspId) {
+              await client.query(
+                'UPDATE actors SET wallet_balance = wallet_balance + $1 WHERE actor_id = $2',
+                [bdspComm, bdspId]
+              );
+            }
+          }
+
+          // Logistics partner: 100% of logistics_fee
+          if (logisticsFee > 0 && updated.logistics_id) {
+            await client.query(
+              'UPDATE actors SET wallet_balance = wallet_balance + $1 WHERE actor_id = $2',
+              [logisticsFee, updated.logistics_id]
+            );
+          }
         }
       });
-      res.locals.auditAction = `Escrow released for transaction ${tx.tx_id} (dual POD complete)`;
+      res.locals.auditAction = `Escrow released for transaction ${tx.tx_id} (seller: ${(Number(updated.total_amount || 0) - Number(updated.commission_v4v || 0) - Number(updated.commission_bdsp || 0)).toFixed(0)}, platform: ${updated.commission_v4v}, bdsp: ${updated.commission_bdsp}, logistics: ${updated.logistics_fee || 0})`;
     }
 
     const final = (await query(`${TX_SELECT} WHERE t.tx_id = $1`, [tx.tx_id])).rows[0];
