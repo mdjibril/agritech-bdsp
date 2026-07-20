@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { ArrowUpRight, Clover, DollarSign, Layers, PackageOpen, Plus, Sprout, Wallet } from 'lucide-react';
-import { api, apiV1, money } from '../api';
+import { ArrowUpRight, BookOpen, CheckCircle2, Clover, DollarSign, GraduationCap, Layers, LoaderCircle, Plus, Sprout, Wallet } from 'lucide-react';
+import { apiV1, money } from '../api';
 import { displayUnit } from '../utils';
 import Page, { Loading, Empty } from '../components/Page';
 import Metric from '../components/Metric';
@@ -12,16 +12,39 @@ export default function SHFDashboard({ user }) {
   const [form, setForm] = useState({ commodity: '', category: 'Crop', quantity_kg: '', unit_price: '', buyer_id: '' });
 
   const categoryConfig = {
-    Crop:     { unit: 'kg',     placeholder: 'e.g. Maize' },
-    Livestock:{ unit: 'heads',  placeholder: 'e.g. Goats' },
-    Input:    { unit: 'bags',   placeholder: 'e.g. NPK Fertilizer' },
+    Crop:     { unit: 'kg', placeholder: 'e.g. Maize' },
+    Livestock:{ unit: 'kg', placeholder: 'e.g. Beef' },
+    Input:    { unit: 'kg', placeholder: 'e.g. NPK Fertilizer' },
   };
   const cfg = categoryConfig[form.category] || categoryConfig.Crop;
   const [submitting, setSubmitting] = useState(false);
+  const [courses, setCourses] = useState([]);
+  const [coursesLoading, setCoursesLoading] = useState(true);
+  const [enrolling, setEnrolling] = useState(null);
 
   useEffect(() => {
     apiV1('/transactions').then((r) => setTransactions(r.transactions || [])).catch(() => {}).finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    apiV1('/training-records/courses')
+      .then((r) => setCourses(r.courses || []))
+      .catch(() => {})
+      .finally(() => setCoursesLoading(false));
+  }, []);
+
+  async function handleEnroll(courseName) {
+    setEnrolling(courseName);
+    try {
+      await apiV1('/training-records/enroll', {
+        method: 'POST',
+        body: JSON.stringify({ course_name: courseName }),
+      });
+      const r = await apiV1('/training-records/courses');
+      setCourses(r.courses || []);
+    } catch (err) { alert(err.message); }
+    finally { setEnrolling(null); }
+  }
 
   async function handlePostSell(e) {
     e.preventDefault();
@@ -98,20 +121,56 @@ export default function SHFDashboard({ user }) {
         {sold.length === 0 ? <Empty /> : (
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Commodity</th><th>Qty</th><th>Unit price</th><th>Total</th><th>Status</th><th>Date</th></tr></thead>
+              <thead><tr><th>Commodity</th><th>Qty</th><th>Unit price</th><th>Total</th><th>Logistics</th><th>Status</th><th>Date</th></tr></thead>
               <tbody>
                 {sold.map((t) => (
                   <tr key={t.tx_id}>
                     <td><strong>{t.commodity}</strong></td>
                     <td>{Number(t.quantity_kg).toLocaleString()} {displayUnit(t.category)}</td>
                     <td>{money(t.unit_price)}</td>
-                    <td>{money(t.total_amount)}</td>
+                    <td><strong>{money(t.total_amount)}</strong></td>
+                    <td><span className="muted-text">{t.logistics_name || '—'}</span></td>
                     <td><span className={`status-badge ${t.status === 'COMPLETED' ? 'success' : t.status === 'INITIATED' ? 'warning' : 'info'}`}>{t.status}</span></td>
                     <td>{new Date(t.created_at).toLocaleDateString('en-NG', { day: '2-digit', month: 'short' })}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+      </div>
+
+      <div className="panel" style={{ marginTop: 20 }}>
+        <div className="panel-head"><div><h2><GraduationCap size={20} style={{ verticalAlign: 'middle', marginRight: 8 }} />KBS Training Hub</h2><p>Enroll in courses to build your farming and business skills</p></div></div>
+        {coursesLoading ? (
+          <div style={{ padding: 20, textAlign: 'center' }}><LoaderCircle className="spin" size={20} /></div>
+        ) : courses.length === 0 ? (
+          <p className="muted-text" style={{ padding: 20 }}>No courses available</p>
+        ) : (
+          <div className="kbs-courses" style={{ padding: '0 20px 20px' }}>
+            {courses.map((c) => (
+              <div key={c.course_name} className="course-card">
+                <div className="course-icon"><BookOpen size={20} /></div>
+                <div style={{ flex: 1 }}>
+                  <strong>{c.course_name}</strong>
+                  <span>{c.provider || 'KBS TRAINING HUB'} · {Number(c.total_enrolled)} enrolled</span>
+                  {c.my_status ? (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4, color: c.my_status === 'COMPLETED' ? 'var(--success)' : c.my_status === 'ENROLLED' ? 'var(--accent)' : 'var(--danger)' }}>
+                      <CheckCircle2 size={14} /> {c.my_status.charAt(0) + c.my_status.slice(1).toLowerCase()}
+                    </span>
+                  ) : null}
+                </div>
+                {!c.my_status && (
+                  <button
+                    className="primary-button sm"
+                    onClick={() => handleEnroll(c.course_name)}
+                    disabled={enrolling === c.course_name}
+                  >
+                    {enrolling === c.course_name ? <LoaderCircle className="spin" size={14} /> : 'Enroll'}
+                  </button>
+                )}
+              </div>
+            ))}
           </div>
         )}
       </div>

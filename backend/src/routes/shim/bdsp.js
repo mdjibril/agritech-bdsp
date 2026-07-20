@@ -4,17 +4,31 @@ const { requireAuth } = require('../../middleware/auth');
 
 const router = express.Router();
 
-// GET /bdsp/network — Legacy BDSP network view
+// GET /bdsp/network — BDSP / V4V_ADMIN network view
 router.get('/network', requireAuth, async (req, res, next) => {
   try {
-    if (req.user.actor_type !== 'BDSP') {
-      return res.status(403).json({ error: 'BDSP role required' });
+    const isAdmin = req.user.actor_type === 'V4V_ADMIN';
+    if (req.user.actor_type !== 'BDSP' && !isAdmin) {
+      return res.status(403).json({ error: 'BDSP or V4V Admin role required' });
     }
 
+    // V4V_ADMIN sees all BDSPs' networks; BDSP sees only their own
+    const bdspFilter = isAdmin
+      ? 'a.bdsp_id IN (SELECT actor_id FROM actors WHERE actor_type = \'BDSP\')'
+      : 'a.bdsp_id = $1';
+
+    const queryParams = isAdmin ? [] : [req.user.actor_id];
+    const placeholderIdx = isAdmin ? '' : '$1';
+
     const members = await query(
-      `SELECT actor_id, actor_type, full_name, phone, gender, lga, state, kyc_status, created_at
-       FROM actors WHERE bdsp_id = $1 ORDER BY created_at DESC`,
-      [req.user.actor_id]
+      `SELECT a.actor_id, a.actor_type, a.full_name, a.phone, a.gender,
+              a.lga, a.state, a.kyc_status, a.created_at, a.bdsp_id,
+              b.full_name AS bdsp_name
+       FROM actors a
+       LEFT JOIN actors b ON b.actor_id = a.bdsp_id
+       WHERE ${bdspFilter}
+       ORDER BY a.created_at DESC`,
+      queryParams
     );
 
     // Gender counts
@@ -68,7 +82,7 @@ router.get('/network', requireAuth, async (req, res, next) => {
                 COALESCE(SUM(total_amount), 0)::numeric AS total_deal_value,
                 COALESCE(SUM(commission_v4v), 0)::numeric AS total_v4v_revenue,
                 COALESCE(SUM(commission_bdsp), 0)::numeric AS total_bdsp_commission
-         FROM transactions WHERE seller_id = ANY($1::int[])`,
+         FROM transactions WHERE seller_id = ANY($1::int[]) AND status = 'COMPLETED'`,
         [sellerIds]
       );
       commission_ledger = ledger.rows[0];
@@ -88,6 +102,7 @@ router.get('/network', requireAuth, async (req, res, next) => {
         commodities: commoditiesByActor[m.actor_id] || [],
         listing_count: listingCounts[m.actor_id] || 0,
         joined_at: m.created_at,
+        bdsp_name: m.bdsp_name || null,
       })),
       metrics: {
         member_count: members.rows.length,

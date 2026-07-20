@@ -26,6 +26,8 @@ export default function V4VAdminDashboard({ user }) {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [roleFilter, setRoleFilter] = useState('all');
+  const [userPage, setUserPage] = useState(0);
+  const PER_PAGE = 20;
   const [courses, setCourses] = useState([]);
   const [trainingRecords, setTrainingRecords] = useState([]);
   const [selectedCourse, setSelectedCourse] = useState('all');
@@ -47,6 +49,8 @@ export default function V4VAdminDashboard({ user }) {
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => { setUserPage(0); }, [roleFilter]);
+
   if (loading) return <Loading />;
 
   const escrows = transactions.filter((t) => t.escrow_required);
@@ -54,10 +58,17 @@ export default function V4VAdminDashboard({ user }) {
   const disputed = transactions.filter((t) => t.status === 'DISPUTED');
   const totalV4V = transactions.reduce((s, t) => s + Number(t.commission_v4v || 0), 0);
   const totalBdsp = transactions.reduce((s, t) => s + Number(t.commission_bdsp || 0), 0);
+  const totalMarketplace = transactions.reduce((s, t) => s + Number(t.marketplace_fee || 0), 0);
+  const totalLogisticsCoord = transactions.reduce((s, t) => s + Number(t.logistics_coordination_fee || 0), 0);
+  const totalInsurancePool = transactions.reduce((s, t) => s + Number(t.insurance_premium || 0), 0);
+  const totalGateway = transactions.reduce((s, t) => s + Number(t.gateway_reserve || 0), 0);
+  const totalOperations = transactions.reduce((s, t) => s + Number(t.operations_reserve || 0), 0);
+  const totalInsuranceProvider = transactions.reduce((s, t) => s + Number(t.insurance_provider_share || 0), 0);
 
   const filtered = filter === 'all' ? transactions
     : filter === 'disputed' ? disputed
     : filter === 'active' ? transactions.filter((t) => t.status !== 'COMPLETED' && t.status !== 'DISPUTED')
+    : filter === 'completed' ? transactions.filter((t) => t.status === 'COMPLETED')
     : transactions;
 
   const roleCounts = {};
@@ -69,14 +80,16 @@ export default function V4VAdminDashboard({ user }) {
   const platformBdsp = bdsps.filter((a) => a.is_platform);
   const normalBdsps = bdsps.filter((a) => !a.is_platform);
   const shfCount = roleCounts['SHF'] || 0;
-  const underPlatform = actors.filter((a) => a.actor_type === 'SHF' && a.bdsp_id === 1).length;
+  const underPlatform = actors.filter((a) => a.actor_type === 'SHF' && a.bdsp_id === 25).length;
 
   const recentActivity = [...transactions]
     .sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at))
-    .slice(0, 10);
+    .slice(0, 5);
 
   const filteredActors = roleFilter === 'all' ? actors : actors.filter((a) => a.actor_type === roleFilter);
   const uniqueRoles = [...new Set(actors.map((a) => a.actor_type))];
+  const totalPages = Math.ceil(filteredActors.length / PER_PAGE);
+  const paginatedActors = filteredActors.slice(userPage * PER_PAGE, (userPage + 1) * PER_PAGE);
 
   const filteredTrainingRecords = trainingRecords.filter((r) =>
     (selectedCourse === 'all' || r.course_name === selectedCourse) &&
@@ -139,12 +152,18 @@ export default function V4VAdminDashboard({ user }) {
         </section>
 
         <section className="panel">
-          <div className="panel-head"><div><h2>Commission ledger</h2><p>Revenue & distribution</p></div></div>
+          <div className="panel-head"><div><h2>Phase 7 Commission Ledger</h2><p>Revenue & distribution breakdown</p></div></div>
           <div className="allocation" style={{ flexDirection: 'column', display: 'flex' }}>
-            <div><span>V4V revenue</span><strong>{money(totalV4V)}</strong><small>70% platform fee share</small></div>
-            <div><span>BDSP commissions</span><strong>{money(totalBdsp)}</strong><small>30% network share</small></div>
-            <div><span>Total escrow held</span><strong>{money(activeEscrows.reduce((s, t) => s + Number(t.total_amount), 0))}</strong><small>{activeEscrows.length} active holds</small></div>
-            <div><span>Mean deal value</span><strong>{money(transactions.length ? transactions.reduce((s, t) => s + Number(t.total_amount), 0) / transactions.length : 0)}</strong><small>Per transaction</small></div>
+            <div><span>Marketplace Fee (1%)</span><strong>{money(totalMarketplace)}</strong><small>Buyer-side markup</small></div>
+            <div><span>Logistics Coord. (10% of freight)</span><strong>{money(totalLogisticsCoord)}</strong><small>Coordination margin</small></div>
+            <div><span>Insurance Pool Total (2%)</span><strong>{money(totalInsurancePool)}</strong><small>{transactions.filter(t => Number(t.insurance_premium) > 0).length} insured txs</small></div>
+            <div style={{ paddingLeft: 20, borderLeft: '3px solid var(--accent)', margin: '4px 0' }}>
+              <div><span>→ Insurance Provider (80%)</span><strong>{money(totalInsuranceProvider)}</strong><small>NAIC/AXA</small></div>
+              <div><span>→ Gateway Reserve (2%)</span><strong>{money(totalGateway)}</strong><small>Processor costs</small></div>
+              <div><span>→ BDSP Share (40% of 18%)</span><strong>{money(totalBdsp)}</strong><small>Network commission</small></div>
+              <div><span>→ Operations Reserve (20% of 18%)</span><strong>{money(totalOperations)}</strong><small>Infrastructure</small></div>
+            </div>
+            <div><span>Consolidated V4V Revenue</span><strong>{money(totalV4V)}</strong><small>Mkt fee + logistics coord + V4V insurance share</small></div>
           </div>
         </section>
       </div>
@@ -177,17 +196,26 @@ export default function V4VAdminDashboard({ user }) {
         <div className="panel-head"><div><h2>User registry</h2><p>All registered actors — {actors.length} total ({underPlatform} under Platform BDSP)</p></div></div>
         {actors.length === 0 ? <p className="muted-text">No users found</p> : (
           <>
-            <div className="filter-group" style={{ marginBottom: 16 }}>
-              <button className={`filter-chip ${roleFilter === 'all' ? 'active' : ''}`} onClick={() => setRoleFilter('all')}>All ({actors.length})</button>
-              {uniqueRoles.map((role) => (
-                <button key={role} className={`filter-chip ${roleFilter === role ? 'active' : ''}`} onClick={() => setRoleFilter(role)}>{ROLE_LABELS[role] || role} ({roleCounts[role]})</button>
-              ))}
+            <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span>Filter by role:</span>
+                <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}
+                  style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid var(--border)' }}>
+                  <option value="all">All ({actors.length})</option>
+                  {uniqueRoles.map((role) => (
+                    <option key={role} value={role}>{ROLE_LABELS[role] || role} ({roleCounts[role]})</option>
+                  ))}
+                </select>
+              </label>
+              <span className="muted-text" style={{ marginLeft: 'auto' }}>
+                Showing {paginatedActors.length} of {filteredActors.length} users
+              </span>
             </div>
             <div className="table-wrap">
               <table>
                 <thead><tr><th>Actor ID</th><th>Name</th><th>Phone</th><th>Role</th><th>Gender</th><th>KYC</th><th>LGA</th><th>BDSP ID</th><th>Wallet</th><th>Joined</th></tr></thead>
                 <tbody>
-                  {filteredActors.map((a) => (
+                  {paginatedActors.map((a) => (
                     <tr key={a.actor_id}>
                       <td><strong>{a.actor_id}</strong></td>
                       <td>{a.full_name}</td>
@@ -204,6 +232,15 @@ export default function V4VAdminDashboard({ user }) {
                 </tbody>
               </table>
             </div>
+            {totalPages > 1 && (
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 12 }}>
+                <button className="secondary-button sm" disabled={userPage === 0} onClick={() => setUserPage((p) => p - 1)}>← Prev</button>
+                {Array.from({ length: totalPages }, (_, i) => (
+                  <button key={i} className={`filter-chip ${userPage === i ? 'active' : ''}`} onClick={() => setUserPage(i)}>{i + 1}</button>
+                ))}
+                <button className="secondary-button sm" disabled={userPage >= totalPages - 1} onClick={() => setUserPage((p) => p + 1)}>Next →</button>
+              </div>
+            )}
           </>
         )}
       </section>
@@ -228,7 +265,7 @@ export default function V4VAdminDashboard({ user }) {
       <section className="panel" style={{ marginBottom: 20 }}>
         <div className="panel-head"><div><h2>Escrow ledger</h2><p>All transactions requiring escrow</p></div></div>
         <div className="filter-group" style={{ marginBottom: 16 }}>
-          {['all', 'active', 'disputed'].map((f) => (
+          {['all', 'active', 'completed', 'disputed'].map((f) => (
             <button key={f} className={`filter-chip ${filter === f ? 'active' : ''}`} onClick={() => setFilter(f)}>
               {f.charAt(0).toUpperCase() + f.slice(1)}
             </button>
@@ -236,17 +273,20 @@ export default function V4VAdminDashboard({ user }) {
         </div>
         <div className="table-wrap">
           <table>
-            <thead><tr><th>ID</th><th>Commodity</th><th>Amount</th><th>V4V Fee</th><th>BDSP Fee</th><th>Status</th><th>Escrow</th></tr></thead>
+            <thead><tr><th>ID</th><th>Commodity</th><th>Base</th><th>Insurance</th><th>Mkt Fee</th><th>Log. Coord</th><th>Total Invoice</th><th>V4V Rev</th><th>BDSP</th><th>Status</th></tr></thead>
             <tbody>
               {filtered.map((t) => (
                 <tr key={t.tx_id}>
                   <td><strong>#{t.tx_id}</strong></td>
                   <td>{t.commodity}</td>
                   <td>{money(t.total_amount)}</td>
+                  <td>{money(t.insurance_premium)}</td>
+                  <td>{money(t.marketplace_fee)}</td>
+                  <td>{money(t.logistics_coordination_fee)}</td>
+                  <td><strong>{money(Number(t.total_amount) + Number(t.logistics_fee || 0) + Number(t.insurance_premium || 0) + Number(t.marketplace_fee || 0) + Number(t.logistics_coordination_fee || 0))}</strong></td>
                   <td>{money(t.commission_v4v)}</td>
                   <td>{money(t.commission_bdsp)}</td>
                   <td><StatusBadge status={t.status} /></td>
-                  <td>{t.escrow_required ? <span className="status-badge warning">Held</span> : <span className="muted-text">—</span>}</td>
                 </tr>
               ))}
             </tbody>

@@ -3,6 +3,7 @@ const { query, transaction } = require('../../db');
 const { requireFields, assertOneOf, VALID_CATEGORIES } = require('../../validation');
 const { requireAuth, requireRole } = require('../../middleware/auth');
 const { badRequest, forbidden, notFound } = require('../../httpError');
+const { calculateFinancials } = require('../../services/financials');
 
 const router = express.Router();
 
@@ -13,6 +14,8 @@ const TX_SELECT = `
          t.status, t.trucker_pod_confirmed, t.buyer_pod_confirmed,
          t.escrow_required, t.commission_v4v, t.commission_bdsp,
          t.category, t.logistics_fee,
+         t.insurance_premium, t.marketplace_fee, t.logistics_coordination_fee,
+         t.insurance_provider_share, t.gateway_reserve, t.operations_reserve,
          t.created_at, t.updated_at,
          buyer.full_name AS buyer_name,
          seller.full_name AS seller_name,
@@ -81,11 +84,25 @@ router.post('/', requireAuth, async (req, res, next) => {
 
       const logisticsFee = Number(req.body.logistics_fee || 0);
 
+      // Phase 7: compute buyer-side markup financials for direct deals
+      let financials = null;
+      let insertFields = 'buyer_id, seller_id, logistics_id, commodity, category, quantity_kg, unit_price, logistics_fee';
+      let insertValues = '$1, $2, $3, $4, $5, $6, $7, $8';
+      let insertParams = [buyId, sellId, logisticsId, req.body.commodity, req.body.category || 'Crop', req.body.quantity_kg, req.body.unit_price, logisticsFee];
+
+      if (hasBuyer && hasSeller) {
+        const totalAmount = Number(req.body.quantity_kg) * Number(req.body.unit_price);
+        financials = calculateFinancials({ itemPrice: totalAmount, logisticsFee });
+        insertFields += ', insurance_premium, marketplace_fee, logistics_coordination_fee, insurance_provider_share, gateway_reserve, operations_reserve';
+        insertValues += `, $9, $10, $11, $12, $13, $14`;
+        insertParams.push(financials.insurancePremium, financials.marketplaceFee, financials.logisticsCoordinationFee, financials.insuranceProviderShare, financials.gatewayReserve, financials.operationsReserve);
+      }
+
       const tx = await client.query(
-        `INSERT INTO transactions (buyer_id, seller_id, logistics_id, commodity, category, quantity_kg, unit_price, logistics_fee)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        `INSERT INTO transactions (${insertFields})
+         VALUES (${insertValues})
          RETURNING *`,
-        [buyId, sellId, logisticsId, req.body.commodity, req.body.category || 'Crop', req.body.quantity_kg, req.body.unit_price, logisticsFee]
+        insertParams
       );
       const txn = tx.rows[0];
 
@@ -103,9 +120,9 @@ router.post('/', requireAuth, async (req, res, next) => {
         return txn;
       }
 
-      // Direct deal: escrow if needed (holds crop value + logistics fee)
+      // Direct deal: escrow if needed (holds total buyer invoice = base + all markups)
       if (txn.escrow_required) {
-        const escrowAmount = Number(txn.total_amount) + logisticsFee;
+        const escrowAmount = financials ? financials.totalBuyerInvoice : (Number(txn.total_amount) + logisticsFee);
         await client.query(
           "INSERT INTO escrow (tx_id, amount, funded_by, status) VALUES ($1, $2, $3, 'HELD')",
           [txn.tx_id, escrowAmount, txn.buyer_id]
@@ -210,7 +227,22 @@ router.put('/:id/claim', requireAuth, async (req, res, next) => {
       );
 
       if (tx.escrow_required) {
-        const escrowAmount = Number(tx.total_amount) + Number(tx.logistics_fee || 0);
+        const totalAmount = Number(tx.quantity_kg) * Number(tx.unit_price);
+        const logisticsFee = Number(tx.logistics_fee || 0);
+        const financials = calculateFinancials({ itemPrice: totalAmount, logisticsFee });
+        const escrowAmount = financials.totalBuyerInvoice;
+
+        await client.query(
+          `UPDATE transactions SET
+             insurance_premium = $1, marketplace_fee = $2,
+             logistics_coordination_fee = $3, insurance_provider_share = $4,
+             gateway_reserve = $5, operations_reserve = $6
+           WHERE tx_id = $7`,
+          [financials.insurancePremium, financials.marketplaceFee,
+           financials.logisticsCoordinationFee, financials.insuranceProviderShare,
+           financials.gatewayReserve, financials.operationsReserve, tx.tx_id]
+        );
+
         await client.query(
           "INSERT INTO escrow (tx_id, amount, funded_by, status) VALUES ($1, $2, $3, 'HELD')",
           [tx.tx_id, escrowAmount, req.user.actor_id]
@@ -259,7 +291,22 @@ router.put('/:id/offer', requireAuth, async (req, res, next) => {
       );
 
       if (tx.escrow_required) {
-        const escrowAmount = Number(tx.total_amount) + Number(tx.logistics_fee || 0);
+        const totalAmount = Number(tx.quantity_kg) * Number(tx.unit_price);
+        const logisticsFee = Number(tx.logistics_fee || 0);
+        const financials = calculateFinancials({ itemPrice: totalAmount, logisticsFee });
+        const escrowAmount = financials.totalBuyerInvoice;
+
+        await client.query(
+          `UPDATE transactions SET
+             insurance_premium = $1, marketplace_fee = $2,
+             logistics_coordination_fee = $3, insurance_provider_share = $4,
+             gateway_reserve = $5, operations_reserve = $6
+           WHERE tx_id = $7`,
+          [financials.insurancePremium, financials.marketplaceFee,
+           financials.logisticsCoordinationFee, financials.insuranceProviderShare,
+           financials.gatewayReserve, financials.operationsReserve, tx.tx_id]
+        );
+
         await client.query(
           "INSERT INTO escrow (tx_id, amount, funded_by, status) VALUES ($1, $2, $3, 'HELD')",
           [tx.tx_id, escrowAmount, tx.buyer_id]
@@ -305,7 +352,7 @@ router.post('/:id/confirm-pod', requireAuth, async (req, res, next) => {
       res.locals.auditAction = `Buyer confirmed POD for transaction ${tx.tx_id}`;
     }
 
-    // Check if both confirmed — atomic release with commission distribution
+    // Check if both confirmed — atomic Phase 7 payout distribution
     const updated = (await query('SELECT * FROM transactions WHERE tx_id = $1', [tx.tx_id])).rows[0];
     if (updated.trucker_pod_confirmed && updated.buyer_pod_confirmed) {
       await transaction(async (client) => {
@@ -317,51 +364,60 @@ router.post('/:id/confirm-pod', requireAuth, async (req, res, next) => {
           "UPDATE transactions SET status = 'COMPLETED' WHERE tx_id = $1",
           [tx.tx_id]
         );
-        if (escrowResult.rows.length) {
-          const escrowAmount = Number(escrowResult.rows[0].amount);
-          const v4vComm = Number(updated.commission_v4v || 0);
-          const bdspComm = Number(updated.commission_bdsp || 0);
-          const logisticsFee = Number(updated.logistics_fee || 0);
 
-          // Seller payout: escrow - commissions - logistics
-          const sellerPayout = escrowAmount - v4vComm - bdspComm - logisticsFee;
-          if (sellerPayout > 0) {
+        if (escrowResult.rows.length) {
+          const logisticsFee     = Number(updated.logistics_fee || 0);
+          const totalAmount      = Number(updated.total_amount || 0);
+          const f = calculateFinancials({ itemPrice: totalAmount, logisticsFee });
+
+          if (f.sellerPayout > 0) {
             await client.query(
               'UPDATE actors SET wallet_balance = wallet_balance + $1 WHERE actor_id = $2',
-              [sellerPayout, updated.seller_id]
+              [f.sellerPayout, updated.seller_id]
             );
           }
 
-          // V4V Platform BDSP (actor_id=1): gets commission_v4v
-          if (v4vComm > 0) {
+          if (f.logisticsPayout > 0 && updated.logistics_id) {
             await client.query(
-              'UPDATE actors SET wallet_balance = wallet_balance + $1 WHERE actor_id = 1',
-              [v4vComm]
+              'UPDATE actors SET wallet_balance = wallet_balance + $1 WHERE actor_id = $2',
+              [f.logisticsPayout, updated.logistics_id]
             );
           }
 
-          // Seller's BDSP: gets commission_bdsp
-          if (bdspComm > 0) {
-            const seller = await client.query('SELECT bdsp_id FROM actors WHERE actor_id = $1', [updated.seller_id]);
-            const bdspId = seller.rows[0]?.bdsp_id;
-            if (bdspId) {
+          const seller = await client.query('SELECT bdsp_id FROM actors WHERE actor_id = $1', [updated.seller_id]);
+          const bdspId = seller.rows[0]?.bdsp_id;
+          if (f.bdspInsuranceShare > 0) {
+            if (bdspId && bdspId !== 25) {
               await client.query(
                 'UPDATE actors SET wallet_balance = wallet_balance + $1 WHERE actor_id = $2',
-                [bdspComm, bdspId]
+                [f.bdspInsuranceShare, bdspId]
+              );
+            } else {
+              const v4vSplit = Math.round(f.bdspInsuranceShare * 0.80 * 100) / 100;
+              const opsSplit = f.bdspInsuranceShare - v4vSplit;
+              await client.query(
+                'UPDATE actors SET wallet_balance = wallet_balance + $1 WHERE actor_id = 25',
+                [v4vSplit]
+              );
+              await client.query(
+                'UPDATE transactions SET operations_reserve = operations_reserve + $1 WHERE tx_id = $2',
+                [opsSplit, tx.tx_id]
               );
             }
           }
 
-          // Logistics partner: 100% of logistics_fee
-          if (logisticsFee > 0 && updated.logistics_id) {
-            await client.query(
-              'UPDATE actors SET wallet_balance = wallet_balance + $1 WHERE actor_id = $2',
-              [logisticsFee, updated.logistics_id]
-            );
-          }
+          await client.query(
+            'UPDATE transactions SET commission_v4v = $1, commission_bdsp = $2 WHERE tx_id = $3',
+            [f.v4vAdminTotal, f.bdspInsuranceShare, tx.tx_id]
+          );
+
+          await client.query(
+            'UPDATE actors SET wallet_balance = wallet_balance + $1 WHERE actor_id = 25',
+            [f.v4vAdminTotal + f.insuranceProviderShare + f.gatewayReserve + f.operationsReserve]
+          );
         }
       });
-      res.locals.auditAction = `Escrow released for transaction ${tx.tx_id} (seller: ${(Number(updated.total_amount || 0) - Number(updated.commission_v4v || 0) - Number(updated.commission_bdsp || 0)).toFixed(0)}, platform: ${updated.commission_v4v}, bdsp: ${updated.commission_bdsp}, logistics: ${updated.logistics_fee || 0})`;
+      res.locals.auditAction = `Escrow released for transaction ${tx.tx_id} — seller ${Number(updated.total_amount).toFixed(0)}, logistics ${updated.logistics_fee || 0}`;
     }
 
     const final = (await query(`${TX_SELECT} WHERE t.tx_id = $1`, [tx.tx_id])).rows[0];

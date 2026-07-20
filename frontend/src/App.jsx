@@ -136,7 +136,7 @@ function RoleShell({ user, page, setPage, onLogout, children }) {
     <div className="app-shell">
       <aside className={`sidebar ${open ? 'open' : ''}`}>
         <div className="sidebar-head">
-          <div className="brand-mark small"><span>V4V</span></div>
+          <div className="brand-mark small"><img src="/images/v4v-logo.png" alt="V4V" width="120" height="40" /></div>
           <button className="icon-button mobile-only" onClick={() => setOpen(false)} aria-label="Close menu"><X /></button>
         </div>
         <nav>

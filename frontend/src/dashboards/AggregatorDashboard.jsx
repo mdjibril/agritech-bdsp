@@ -15,9 +15,9 @@ export default function AggregatorDashboard({ user }) {
   const [buySubmitting, setBuySubmitting] = useState(false);
 
   const categoryConfig = {
-    Crop:     { unit: 'kg',     placeholder: 'e.g. Maize' },
-    Livestock:{ unit: 'heads',  placeholder: 'e.g. Goats' },
-    Input:    { unit: 'bags',   placeholder: 'e.g. NPK Fertilizer' },
+    Crop:     { unit: 'kg', placeholder: 'e.g. Maize' },
+    Livestock:{ unit: 'kg', placeholder: 'e.g. Beef' },
+    Input:    { unit: 'kg', placeholder: 'e.g. NPK Fertilizer' },
   };
   const cfg = categoryConfig[buyForm.category] || categoryConfig.Crop;
 

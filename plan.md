@@ -177,52 +177,56 @@
 
 ---
 
-## Phase 7: V4V MARKETPLACE: FINANCIAL & COMMISSION MECHANICS
+## Phase 7: V4V MARKETPLACE: FINANCIAL & COMMISSION MECHANICS (FINAL SPEC)
 
-## 1. Commodity Sales (Crop Trading)
-Applied when a crop is successfully sold and dual-lock Proof of Delivery (POD) is confirmed.
+## 1. Transaction Financial Summary (Markup Model)
+All fees are calculated using a buyer-side markup architecture. The seller receives 100% of their listed asset value without deductions, ensuring high retention and acquisition of agricultural merchants.
 
-*   **Total Platform Deduction:** 2% of the total crop value.
-*   **Distribution of the 2% Deduction:**
-    *   **V4V Platform:** 70% 
-    *   **BDSP (Onboarding Agent):** 30%
-*   **Seller Payout:** The seller (e.g., SHF) receives the remaining 98% of the crop value.
-
-**Example: 500,000 NGN Crop Sale**
-*   Total Fee (2%): 10,000 NGN
-*   V4V Share (70% of fee): 7,000 NGN
-*   BDSP Share (30% of fee): 3,000 NGN
-*   Seller Payout: 490,000 NGN
+**Core Formula:**
+$$\text{Total Buyer Invoice} = \text{Base Item Price} + \text{Embedded Insurance (2\% of Item)} + \text{Marketplace Fee (1\% of Item)} + \text{Logistics Fee} + \text{Logistics Coordination (10\% of Logistics Fee)}$$
 
 ---
 
-## 2. Logistics & Freight (Transport)
-Applied to the transport fee negotiated between the buyer (Aggregator) and the Logistics Partner.
+## 2. Complete Financial Simulation Profile
+**Scenario Inputs:**
+*   **Seller Crop List Price:** 500,000 NGN
+*   **Negotiated Trucker Freight Cost:** 20,000 NGN
 
-*   **Total Platform Deduction:** 0% (Platform takes no cut to drive early adoption).
-*   **Distribution:**
-    *   **V4V Platform:** 0%
-    *   **Logistics Partner (Trucker):** 100% of the negotiated logistics fee.
-*   **Payment Flow:** The buyer funds the escrow with the combined total `(Crop Price + Logistics Fee)`. Upon Dual-POD confirmation, the full logistics fee is routed directly to the Trucker's bank account.
+### Item Price Markups (Calculated on 500,000 NGN)
+*   **Base Item Price (To Seller):** 500,000 NGN
+*   **Embedded Insurance (2%):** 10,000 NGN
+*   **Marketplace Fee (1%):** 5,000 NGN
 
-**Example: 50,000 NGN Freight Job**
-*   Total Fee (0%): 0 NGN
-*   Logistics Partner Payout: 50,000 NGN
+### Transport Price Markups (Calculated on 20,000 NGN)
+*   **Base Freight Cost (To Trucker):** 20,000 NGN
+*   **Logistics Coordination Fee (10%):** 2,000 NGN
+
+### Total Buyer Cash Requirement:
+*   $$\text{Total Invoice Amount} = 500,000 + 10,000 + 5,000 + 20,000 + 2,000 = \mathbf{537,000\ NGN}$$
 
 ---
 
-## 3. Digital Insurance Premiums
-Applied when an actor (SHF, Aggregator, etc.) purchases a standalone crop, livestock, or equipment insurance policy.
+## 3. Automated Revenue Payout Routing
+Once the dual-lock Proof of Delivery (POD) resolves to true, the escrow sub-system splits and payouts the 537,000 NGN pool instantly to respective destination wallets:
 
-*   **Total Platform Deduction:** 12% of the total premium cost.
-*   **Distribution:**
-    *   **V4V Platform:** 12% flat commission.
-    *   **Insurance Provider (NAIC/AXA):** 88% of the premium.
+### A. Core Actor Disbursements
+*   **Seller Wallet Payout:** 500,000 NGN (100% Net payout, zero system friction fees).
+*   **Logistics Partner (Trucker) Payout:** 20,000 NGN (100% Net freight cost).
 
-**Example: 50,000 NGN Insurance Premium**
-*   Total Fee (12%): 6,000 NGN
-*   V4V Share: 6,000 NGN
-*   Insurance Provider Payout: 44,000 NGN
+### B. The 2% Embedded Insurance Pool Breakdown (10,000 NGN)
+*   **Insurance Provider Wallet (80%):** 8,000 NGN (Routed directly to NAIC/AXA).
+*   **Gateway Reserve Pool (2%):** 200 NGN (Retained for automated payment processor processing costs).
+*   **Net Residual Platform Margin (18% Pool = 1,800 NGN):**
+    *   **BDSP Wallet (40% of pool):** 720 NGN (Direct reward for network onboarding).
+    *   **V4V Admin Revenue (40% of pool):** 720 NGN.
+    *   **Operations Reserve Wallet (20% of pool):** 360 NGN (Infrastructure overhead allocation).
+
+### C. System Overhead Markup Revenues
+*   **Marketplace Fee (1%):** 5,000 NGN (Routed directly to V4V Admin).
+*   **Logistics Coordination Fee (10%):** 2,000 NGN (Routed directly to V4V Admin).
+
+### D. Total Consolidated V4V Admin Revenue for this transaction:
+*   $$\text{Total Admin Income} = 720\ (\text{Insurance Split}) + 5,000\ (\text{Marketplace Fee}) + 2,000\ (\text{Logistics Coordination}) = \mathbf{7,720\ NGN}$$
 
 ---
 

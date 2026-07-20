@@ -20,9 +20,9 @@ export default function BDSPDashboard({ user }) {
   const [enrollMessage, setEnrollMessage] = useState('');
 
   const categoryConfig = {
-    Crop:     { unit: 'kg',     placeholder: 'e.g. Maize' },
-    Livestock:{ unit: 'heads',  placeholder: 'e.g. Goats' },
-    Input:    { unit: 'bags',   placeholder: 'e.g. NPK Fertilizer' },
+    Crop:     { unit: 'kg', placeholder: 'e.g. Maize' },
+    Livestock:{ unit: 'kg', placeholder: 'e.g. Beef' },
+    Input:    { unit: 'kg', placeholder: 'e.g. NPK Fertilizer' },
   };
   const cfg = categoryConfig[buyForm.category] || categoryConfig.Crop;
 
@@ -152,7 +152,7 @@ export default function BDSPDashboard({ user }) {
         <Metric label="Network members" value={metrics?.member_count || 0} note="Verified mappings" icon={Users} />
         <Metric label="Active listings" value={active} note="Across member accounts" icon={PackageOpen} />
         <Metric label="Deal value" value={money(metrics?.commission_ledger.total_deal_value)} note={`${metrics?.commission_ledger.deal_count || 0} deals`} icon={WalletCards} />
-        <Metric label="My commission" value={money(metrics?.commission_ledger.total_bdsp_commission)} note="30% ledger allocation" icon={BarChart3} />
+        <Metric label="My commission" value={money(metrics?.commission_ledger.total_bdsp_commission)} note="Insurance residual share" icon={BarChart3} />
       </div>
 
       <div className="two-column">
@@ -170,10 +170,9 @@ export default function BDSPDashboard({ user }) {
           )}
         </section>
         <section className="panel">
-          <PanelHead title="Value allocation" note="Automated commission ledger" />
+          <PanelHead title="Network revenue" note="Insurance residual distribution" />
           <div className="allocation">
-            <div><span>V4V revenue</span><strong>{money(metrics?.commission_ledger.total_v4v_revenue)}</strong><small>70% platform allocation</small></div>
-            <div><span>BDSP commission</span><strong>{money(metrics?.commission_ledger.total_bdsp_commission)}</strong><small>30% network allocation</small></div>
+            <div><span>BDSP commission</span><strong>{money(metrics?.commission_ledger.total_bdsp_commission)}</strong><small>40% of insurance residual pool</small></div>
           </div>
         </section>
       </div>

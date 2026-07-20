@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, ClipboardCheck, Map, PackageOpen, Search, Truck } from 'lucide-react';
+import { CheckCircle2, ClipboardCheck, PackageOpen, Search, Truck, Wallet } from 'lucide-react';
 import { apiV1, money } from '../api';
 import Page, { Loading, Empty } from '../components/Page';
 import Metric from '../components/Metric';
@@ -17,6 +17,7 @@ export default function LogisticsDashboard({ user }) {
   const jobs = useMemo(() => transactions.filter((t) => t.logistics_id === user.actor_id), [transactions, user]);
   const openJobs = jobs.filter((t) => t.status === 'IN_ESCROW' || t.status === 'DISPATCHED');
   const completedJobs = jobs.filter((t) => t.status === 'COMPLETED');
+  const totalEarnings = completedJobs.reduce((s, t) => s + Number(t.logistics_fee || 0), 0);
   const filtered = useMemo(() => jobs.filter((t) =>
     t.commodity?.toLowerCase().includes(search.toLowerCase()) ||
     t.buyer_name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -41,7 +42,7 @@ export default function LogisticsDashboard({ user }) {
       <div className="metrics-grid">
         <Metric label="Open jobs" value={openJobs.length} note="Awaiting action" icon={PackageOpen} />
         <Metric label="Delivered" value={completedJobs.length} note="Confirmed" icon={CheckCircle2} />
-        <Metric label="Active routes" value={openJobs.length} note="In transit" icon={Map} />
+        <Metric label="Total earnings" value={money(totalEarnings)} note="Completed jobs" icon={Wallet} />
         <Metric label="Total jobs" value={jobs.length} note="All time" icon={Truck} />
       </div>
 
@@ -53,7 +54,7 @@ export default function LogisticsDashboard({ user }) {
         {filtered.length === 0 ? <Empty /> : (
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Commodity</th><th>From → To</th><th>Value</th><th>POD Status</th><th>Status</th><th>Action</th></tr></thead>
+              <thead><tr><th>Commodity</th><th>From → To</th><th>Value</th><th>Fee</th><th>POD Status</th><th>Status</th><th>Action</th></tr></thead>
               <tbody>
                 {filtered.map((t) => {
                   const podDone = t.trucker_pod_confirmed;
@@ -62,6 +63,7 @@ export default function LogisticsDashboard({ user }) {
                       <td><strong>{t.commodity}</strong></td>
                       <td><span className="route-pair">{t.seller_name || `#${t.seller_id}`} → {t.buyer_name || `#${t.buyer_id}`}</span></td>
                       <td>{money(t.total_amount)}</td>
+                      <td>{money(t.logistics_fee)}</td>
                       <td>{podDone ? <span className="status-badge success">Confirmed</span> : <span className="status-badge warning">Pending</span>}</td>
                       <td><StatusBadge status={t.status} /></td>
                       <td>

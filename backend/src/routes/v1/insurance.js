@@ -8,7 +8,7 @@ const router = express.Router();
 
 // POST /api/v1/insurance/purchase
 // Actor purchases an insurance policy. Deducts premium from wallet.
-// Splits: 12% → V4V Platform BDSP (actor_id=1), 88% → provider (simulated)
+// Splits: 12% → V4V Platform Admin (actor_id=25), 88% → provider (simulated)
 router.post('/purchase', requireAuth, async (req, res, next) => {
   try {
     const { policy_type, sum_insured, provider } = req.body;
@@ -42,9 +42,9 @@ router.post('/purchase', requireAuth, async (req, res, next) => {
         [premium, req.user.actor_id]
       );
 
-      // 12% to V4V Platform
+      // 12% to V4V Platform Admin
       await client.query(
-        'UPDATE actors SET wallet_balance = wallet_balance + $1 WHERE actor_id = 1',
+        'UPDATE actors SET wallet_balance = wallet_balance + $1 WHERE actor_id = 25',
         [v4vShare]
       );
 

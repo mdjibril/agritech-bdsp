@@ -8,8 +8,10 @@ h1, h2, h3, strong { letter-spacing: 0; }
 .login-shell { min-height: 100vh; display: grid; grid-template-columns: minmax(420px, 1.15fr) minmax(420px, .85fr); }
 .login-brand { background: var(--green); color: white; padding: clamp(40px, 7vw, 96px); display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden; }
 .login-brand::after { content: ''; position: absolute; right: -12%; bottom: -18%; width: 55%; aspect-ratio: 1; border: 1px solid rgba(190,219,114,.25); border-radius: 50%; box-shadow: 0 0 0 80px rgba(190,219,114,.04), 0 0 0 160px rgba(190,219,114,.03); }
-.brand-mark { width: 62px; height: 62px; background: var(--lime); color: var(--green); display: grid; place-items: center; font-family: Georgia, "Times New Roman", serif; font-weight: 800; font-size: 19px; position: relative; z-index: 1; }
-.brand-mark.small { width: 46px; height: 46px; font-size: 15px; }
+.brand-mark { width: auto; height: auto; background: none; color: var(--green); display: flex; align-items: center; position: relative; z-index: 1; }
+.brand-mark img { display: block; height: 40px; width: auto; }
+.brand-mark.small { height: auto; }
+.brand-mark.small img { height: 30px; }
 .login-brand h1 { font-family: Georgia, "Times New Roman", serif; font-size: clamp(38px, 5vw, 70px); line-height: 1.04; max-width: 780px; margin-bottom: 24px; }
 .eyebrow { text-transform: uppercase; color: #a9cb61; font-weight: 700; font-size: 12px; letter-spacing: 1.2px; margin-bottom: 18px; }
 .login-intro { color: #cbd7d0; max-width: 620px; font-size: 18px; line-height: 1.65; }

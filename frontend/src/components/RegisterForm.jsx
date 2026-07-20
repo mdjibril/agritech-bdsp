@@ -80,7 +80,7 @@ export default function RegisterForm({ onRegister, onBack }) {
   return (
     <main className="login-shell">
       <section className="login-brand">
-        <div className="brand-mark"><span>V4V</span></div>
+        <div className="brand-mark"><img src="/images/v4v-logo.png" alt="V4V" width="120" height="40" /></div>
         <div>
           <p className="eyebrow">Chikun Agricultural Network</p>
           <h1>Join the value network.</h1>

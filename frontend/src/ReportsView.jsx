@@ -204,13 +204,13 @@ export default function ReportsView({ user }) {
               { label: 'BDSP Commission', get: (r) => r.total_bdsp },
             ]))}><Download size={14} /> Export CSV</button>
           </div>
-          <div className="two-column" style={{ marginBottom: 16 }}>
-            <section className="panel" style={{ margin: 0 }}>
-              <h3 style={{ marginBottom: 8 }}>By Status</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 18, marginBottom: 16 }}>
+            <section>
+              <h3 style={{ marginBottom: 8, font: '700 15px Georgia,serif' }}>By Status</h3>
               {data.by_status.length === 0 ? <Empty /> : (
                 <div className="table-wrap">
                   <table>
-                    <thead><tr><th>Status</th><th>Count</th><th>Total Value</th><th>V4V</th><th>BDSP</th></tr></thead>
+                    <thead><tr><th>Status</th><th>Count</th><th>Value</th><th>V4V</th><th>BDSP</th></tr></thead>
                     <tbody>
                       {data.by_status.map((s) => (
                         <tr key={s.status}>
@@ -226,8 +226,8 @@ export default function ReportsView({ user }) {
                 </div>
               )}
             </section>
-            <section className="panel" style={{ margin: 0 }}>
-              <h3 style={{ marginBottom: 8 }}>Escrow Status</h3>
+            <section>
+              <h3 style={{ marginBottom: 8, font: '700 15px Georgia,serif' }}>Escrow Status</h3>
               {data.escrow.length === 0 ? <Empty /> : (
                 <div className="table-wrap">
                   <table>

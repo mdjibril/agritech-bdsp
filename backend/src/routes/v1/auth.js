@@ -37,7 +37,7 @@ router.post('/register', requireNpdcConsent, async (req, res, next) => {
     assertOneOf(req.body.gender, VALID_GENDERS, 'gender');
 
     const password_hash = await bcrypt.hash(req.body.password, 12);
-    const bdsp_id = req.body.actor_type === 'SHF' ? 1 : null;
+    const bdsp_id = req.body.actor_type === 'SHF' ? 25 : null;
 
     const result = await query(
       `INSERT INTO actors (phone, password_hash, full_name, actor_type, channel, bank_name, account_number, gender, lga, state, kyc_status, bdsp_id)
@@ -62,7 +62,11 @@ router.post('/register', requireNpdcConsent, async (req, res, next) => {
 
 // POST /api/v1/auth/enroll-farmer
 // BDSP-only: enroll a farmer under their network
-router.post('/enroll-farmer', requireAuth, requireRole('BDSP'), async (req, res, next) => {
+router.post('/enroll-farmer', requireAuth, async (req, res, next) => {
+  // BDSP or V4V_ADMIN can enroll farmers
+  if (req.user.actor_type !== 'BDSP' && req.user.actor_type !== 'V4V_ADMIN') {
+    return next(forbidden('Only BDSP or V4V Admin can enroll farmers'));
+  }
   try {
     requireFields(req.body, 'phone', 'password', 'full_name', 'gender');
     assertOneOf(req.body.gender, VALID_GENDERS, 'gender');

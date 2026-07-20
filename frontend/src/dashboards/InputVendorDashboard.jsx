@@ -41,7 +41,7 @@ export default function InputVendorDashboard({ user }) {
 
   const sold = transactions.filter((t) => t.seller_id === user.actor_id);
   const orders = sold.filter((t) => t.status === 'INITIATED' || t.status === 'IN_ESCROW');
-  const revenue = sold.filter((t) => t.status === 'COMPLETED').reduce((s, t) => s + Number(t.total_amount), 0);
+  const revenue = sold.filter((t) => t.status === 'COMPLETED').reduce((s, t) => s + Number(t.total_amount) - Number(t.commission_v4v || 0) - Number(t.commission_bdsp || 0), 0);
 
   if (loading) return <Loading />;
 
@@ -67,7 +67,7 @@ export default function InputVendorDashboard({ user }) {
           <h3><Package size={18} /> List input product</h3>
           <div className="form-grid">
             <label>Product name <input value={form.commodity} onChange={(e) => setForm({ ...form, commodity: e.target.value })} placeholder="e.g. NPK Fertilizer" required /></label>
-            <label>Quantity (bags) <input type="number" value={form.quantity_kg} onChange={(e) => setForm({ ...form, quantity_kg: e.target.value })} min={1} required /></label>
+            <label>Quantity (kg) <input type="number" value={form.quantity_kg} onChange={(e) => setForm({ ...form, quantity_kg: e.target.value })} min={1} required /></label>
             <label>Unit price (₦/kg) <input type="number" value={form.unit_price} onChange={(e) => setForm({ ...form, unit_price: e.target.value })} min={1} required /></label>
             <label>Buyer (optional) <input value={form.buyer_id} onChange={(e) => setForm({ ...form, buyer_id: e.target.value })} placeholder="Buyer actor ID" /></label>
           </div>

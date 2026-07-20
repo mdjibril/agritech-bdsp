@@ -127,18 +127,60 @@ export default function DealsView({ deals, user, loading, onRefresh }) {
               {showCancel && <button className="secondary-button danger" onClick={() => handleAction(`/deals/${deal.deal_id}/cancel`)}><XCircle size={16} />Cancel Deal</button>}
             </div>}
 
-            <details className="deal-details">
-              <summary>Deal details</summary>
-              <dl>
-                <dt>Hub</dt><dd>{deal.hub_id} — {deal.item_name}</dd>
-                <dt>BDSP</dt><dd>{deal.bdsp_user_id}</dd>
-                <dt>Buyer</dt><dd>{deal.buyer_user_id} {buyerDone && '✓'}</dd>
-                <dt>Sellers</dt><dd>{(deal.seller_user_ids || []).join(', ')} {sellerDone && '✓'}</dd>
-                <dt>Logistics</dt><dd>{deal.logistics_user_id || 'Not assigned'} {logDone && '✓'}</dd>
-                <dt>V4V Revenue</dt><dd>{money(deal.v4v_revenue)}</dd>
-                <dt>BDSP Commission</dt><dd>{money(deal.bdsp_commission)}</dd>
-              </dl>
-            </details>
+            {user?.actor_type === 'V4V_ADMIN' ? (
+              <details className="deal-details">
+                <summary>Phase 7 Financial Breakdown</summary>
+                <dl>
+                  <dt>Buyer</dt><dd>#{deal.buyer_user_id}</dd>
+                  <dt>Seller</dt><dd>#{(deal.seller_user_ids || []).join(', ')}</dd>
+                  <dt>Logistics</dt><dd>{deal.logistics_user_id ? `#${deal.logistics_user_id}` : '—'}</dd>
+                  <dt>Base Amount (Seller)</dt><dd>{money(deal.base_amount)}</dd>
+                  <dt>Logistics Fee (Trucker)</dt><dd>{money(deal.logistics_fee)}</dd>
+                  <dt>Insurance Premium (2%)</dt><dd>{money(deal.insurance_premium)}</dd>
+                  <dt>Marketplace Fee (1%)</dt><dd>{money(deal.marketplace_fee)}</dd>
+                  <dt>Logistics Coord. (10%)</dt><dd>{money(deal.logistics_coordination_fee)}</dd>
+                  <dt>Total Invoice</dt><dd><strong>{money(deal.total_invoice)}</strong></dd>
+                  <dt>V4V Revenue Total</dt><dd>{money(deal.v4v_revenue)}</dd>
+                  <dt>BDSP Commission</dt><dd>{money(deal.bdsp_commission)}</dd>
+                  <dt>Insurance Provider</dt><dd>{money(deal.insurance_provider_share)}</dd>
+                  <dt>Gateway Reserve</dt><dd>{money(deal.gateway_reserve)}</dd>
+                  <dt>Operations Reserve</dt><dd>{money(deal.operations_reserve)}</dd>
+                </dl>
+              </details>
+            ) : user?.actor_type === 'LOGISTICS' ? (
+              <details className="deal-details">
+                <summary>Deal details</summary>
+                <dl>
+                  <dt>Commodity</dt><dd>{deal.item_name}</dd>
+                  <dt>Value</dt><dd><strong>{money(deal.deal_value)}</strong></dd>
+                  <dt>Seller</dt><dd>#{(deal.seller_user_ids || []).join(', ')}</dd>
+                  <dt>Buyer</dt><dd>#{deal.buyer_user_id}</dd>
+                  <dt>Freight Fee</dt><dd>{money(deal.logistics_fee)}</dd>
+                </dl>
+              </details>
+            ) : user?.actor_type === 'SHF' ? (
+              <details className="deal-details">
+                <summary>Deal details</summary>
+                <dl>
+                  <dt>Commodity</dt><dd>{deal.item_name}</dd>
+                  <dt>Value</dt><dd><strong>{money(deal.deal_value)}</strong></dd>
+                  <dt>Buyer</dt><dd>#{deal.buyer_user_id}</dd>
+                  {deal.logistics_user_id && <><dt>Logistics</dt><dd>#{deal.logistics_user_id}</dd></>}
+                </dl>
+              </details>
+            ) : (
+              <details className="deal-details">
+                <summary>Deal details</summary>
+                <dl>
+                  <dt>Commodity</dt><dd>{deal.item_name}</dd>
+                  <dt>Value</dt><dd><strong>{money(deal.deal_value)}</strong></dd>
+                  <dt>Buyer</dt><dd>#{deal.buyer_user_id}</dd>
+                  <dt>Seller</dt><dd>#{(deal.seller_user_ids || []).join(', ')}</dd>
+                  {deal.logistics_user_id && <><dt>Logistics</dt><dd>#{deal.logistics_user_id}</dd></>}
+                  {user?.actor_type === 'BDSP' && <><dt>BDSP Fee</dt><dd>{money(deal.bdsp_commission)}</dd></>}
+                </dl>
+              </details>
+            )}
           </div>}
         </article>;
       })}

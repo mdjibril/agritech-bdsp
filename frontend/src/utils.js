@@ -1,5 +1,5 @@
-// Category-aware unit labels
-const CATEGORY_UNITS = { Crop: 'kg', Livestock: 'heads', Input: 'bags' };
+// All commodity measures in kg
+const CATEGORY_UNITS = { Crop: 'kg', Livestock: 'kg', Input: 'kg' };
 
 export function displayUnit(category) {
   return CATEGORY_UNITS[category] || 'kg';
