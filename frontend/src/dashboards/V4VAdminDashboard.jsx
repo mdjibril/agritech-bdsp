@@ -52,12 +52,6 @@ export default function V4VAdminDashboard({ user }) {
 
   useEffect(() => { setUserPage(0); }, [roleFilter, bdspFilter]);
 
-  useEffect(() => {
-    if (bdspFilter !== 'all') {
-      setRoleFilter('SHF');
-    }
-  }, [bdspFilter]);
-
   if (loading) return <Loading />;
 
   const escrows = transactions.filter((t) => t.escrow_required);
@@ -91,10 +85,13 @@ export default function V4VAdminDashboard({ user }) {
     .sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at))
     .slice(0, 5);
 
-  let filteredActors = roleFilter === 'all' ? actors : actors.filter((a) => a.actor_type === roleFilter);
+  let filteredActors;
   if (bdspFilter !== 'all') {
-    const bdspId = parseInt(bdspFilter, 10);
-    filteredActors = filteredActors.filter((a) => a.bdsp_id === bdspId);
+    filteredActors = actors.filter((a) => String(a.bdsp_id) === bdspFilter);
+  } else if (roleFilter === 'all') {
+    filteredActors = actors;
+  } else {
+    filteredActors = actors.filter((a) => a.actor_type === roleFilter);
   }
   const uniqueRoles = [...new Set(actors.map((a) => a.actor_type))];
   const totalPages = Math.ceil(filteredActors.length / PER_PAGE);

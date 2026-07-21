@@ -161,8 +161,7 @@ export default function ReportsView({ user }) {
           filteredTxs = filteredTxs.filter((t) => t.seller_gender === genderFilter);
         }
         if (bdspFilter !== 'all') {
-          const bdspId = parseInt(bdspFilter, 10);
-          filteredTxs = filteredTxs.filter((t) => t.seller_bdsp_id === bdspId);
+          filteredTxs = filteredTxs.filter((t) => String(t.seller_bdsp_id) === bdspFilter);
         }
         const filteredVolume = Number(filteredTxs.reduce((s, r) => s + Number(r.quantity_kg || 0), 0).toFixed(2));
         const filteredValue = Number(filteredTxs.reduce((s, r) => s + Number(r.total_amount || 0), 0).toFixed(2));
@@ -227,8 +226,7 @@ export default function ReportsView({ user }) {
           filteredFarmers = filteredFarmers.filter((f) => f.gender === genderFilter);
         }
         if (bdspFilter !== 'all') {
-          const bdspId = parseInt(bdspFilter, 10);
-          filteredFarmers = filteredFarmers.filter((f) => f.bdsp_id === bdspId);
+          filteredFarmers = filteredFarmers.filter((f) => String(f.bdsp_id) === bdspFilter);
         }
         return (
         <div className="panel" style={{ marginBottom: 20 }}>
