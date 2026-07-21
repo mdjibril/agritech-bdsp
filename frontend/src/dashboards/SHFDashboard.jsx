@@ -1,9 +1,24 @@
 import { useEffect, useState } from 'react';
-import { ArrowUpRight, BookOpen, CheckCircle2, Clover, DollarSign, GraduationCap, Layers, LoaderCircle, Plus, Sprout, Wallet } from 'lucide-react';
+import { AlertTriangle, ArrowUpRight, BookOpen, Bot, Camera, CheckCircle2, Clover, DollarSign, GraduationCap, Layers, LoaderCircle, MessageCircle, Plus, ScanLine, Sprout, Wallet, X } from 'lucide-react';
 import { apiV1, money } from '../api';
 import { displayUnit } from '../utils';
 import Page, { Loading, Empty } from '../components/Page';
 import Metric from '../components/Metric';
+
+function Modal({ open, onClose, title, children }) {
+  if (!open) return null;
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 520 }}>
+        <div className="modal-header">
+          <h3>{title}</h3>
+          <button className="icon-button" onClick={onClose}><X size={18} /></button>
+        </div>
+        <div className="modal-body">{children}</div>
+      </div>
+    </div>
+  );
+}
 
 export default function SHFDashboard({ user }) {
   const [transactions, setTransactions] = useState([]);
@@ -21,6 +36,8 @@ export default function SHFDashboard({ user }) {
   const [courses, setCourses] = useState([]);
   const [coursesLoading, setCoursesLoading] = useState(true);
   const [enrolling, setEnrolling] = useState(null);
+  const [showAdvisor, setShowAdvisor] = useState(false);
+  const [showHarvestScan, setShowHarvestScan] = useState(false);
 
   useEffect(() => {
     apiV1('/transactions').then((r) => setTransactions(r.transactions || [])).catch(() => {}).finally(() => setLoading(false));
@@ -81,9 +98,14 @@ export default function SHFDashboard({ user }) {
       title="My Farm Dashboard"
       subtitle="Post harvests, track offers, and monitor payouts."
       action={
-        <button className="primary-button" onClick={() => setShowForm(!showForm)}>
-          <Plus size={18} /> {showForm ? 'Cancel' : 'Post harvest'}
-        </button>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button className="secondary-button" onClick={() => setShowHarvestScan(true)}>
+            <ScanLine size={18} /> Scan harvest health
+          </button>
+          <button className="primary-button" onClick={() => setShowForm(!showForm)}>
+            <Plus size={18} /> {showForm ? 'Cancel' : 'Post harvest'}
+          </button>
+        </div>
       }
     >
       <div className="metrics-grid">
@@ -174,6 +196,71 @@ export default function SHFDashboard({ user }) {
           </div>
         )}
       </div>
+
+      {/* V4V Farm Advisor chat bubble */}
+      <button className="chat-bubble" onClick={() => setShowAdvisor(true)} title="Ask V4V Advisor">
+        <MessageCircle size={24} />
+      </button>
+
+      {/* Ask V4V Advisor Modal */}
+      <Modal open={showAdvisor} onClose={() => setShowAdvisor(false)} title="Ask V4V Farm Advisor">
+        <div className="advisor-chat">
+          <div className="chat-message advisor">
+            <Bot size={18} />
+            <div className="chat-bubble-text">
+              <strong>V4V Farm Advisor (AI)</strong>
+              <p>Welcome! I can help with crop health, pest control, soil management, and market prices. Ask me anything in Hausa or English.</p>
+            </div>
+          </div>
+          <div className="chat-message user">
+            <div className="chat-bubble-text">
+              <strong>You</strong>
+              <p>My maize leaves are turning yellow. What should I do?</p>
+            </div>
+          </div>
+          <div className="chat-message advisor">
+            <Bot size={18} />
+            <div className="chat-bubble-text">
+              <strong>V4V Farm Advisor (AI)</strong>
+              <p>Yellow maize leaves can indicate nitrogen deficiency. I recommend applying NPK 15-15-15 fertilizer at 50 kg/acre. For personalized advice with soil data and weather integration, upgrade to Premium.</p>
+            </div>
+          </div>
+        </div>
+        <div className="advisor-premium">
+          <div className="premium-card">
+            <div><strong>Premium Subscription</strong> — ₦500/month</div>
+            <span>Personalized crop advice, input recommendations, pest & disease alerts</span>
+            <button className="primary-button" disabled style={{ marginTop: 12 }}>Coming soon</button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Scan Harvest Health Modal */}
+      <Modal open={showHarvestScan} onClose={() => setShowHarvestScan(false)} title="Scan Harvest Health">
+        <div style={{ textAlign: 'center' }}>
+          <div className="harvest-preview">
+            <div className="harvest-image-placeholder">
+              <Camera size={48} />
+              <span>tomatoes_harvest_sample.jpg</span>
+            </div>
+            <div className="spoilage-badge">
+              <AlertTriangle size={20} />
+              <span><strong>30% Spoilage Risk</strong> — Sell within 2 days or process immediately</span>
+            </div>
+          </div>
+          <div style={{ marginTop: 16 }}>
+            <p className="muted-text" style={{ marginBottom: 12 }}>
+              AI scans your harvest photo to detect spoilage risk, pest damage, and shelf-life estimates.
+            </p>
+            <button className="primary-button" disabled style={{ width: '100%', justifyContent: 'center' }}>
+              Confirm ₦50 deduction via wallet
+            </button>
+            <p className="muted-text" style={{ marginTop: 8, fontSize: 12 }}>
+              Pay-per-scan · Coming soon
+            </p>
+          </div>
+        </div>
+      </Modal>
     </Page>
   );
 }

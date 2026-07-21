@@ -150,7 +150,48 @@ curl -s -X POST http://localhost:4000/api/v1/auth/register \
     "phone":"+2348000000002",
     "password":"mypassword",
     "full_name":"No Consent Tester",
-    "actor_type":"SHF",
+    "actor_type":"SHF",## Phase 8: AI Integration & Monetization Proof of Concepts (POC)
+*Objective: Deploy lightweight, placeholder UI components to demonstrate future AI capabilities and monetization pathways to banks, donors (KBS/AGRA), and investors.*
+
+### 1. AI Agronomist Chatbot ("V4V Farm Advisor")
+*   **The Vision:** Farmers ask questions in Hausa/English via WhatsApp (e.g., "My maize leaves are yellow. What do I do?"). The AI gives instant advice based on weather, soil, and crop stage.
+*   **Monetization Strategy:**
+    *   **Freemium Model:** Basic advice is free. Premium tier is **₦500/month** for personalized advice and specific input recommendations.
+    *   **Donor-Funded (B2B):** KBS/AGRA pay V4V per farmer trained, scaling education without requiring physical trainers on every farm.
+*   **POC Implementation:**
+    > **Placeholder UI Only:** Add a visible "Ask V4V Advisor" chat bubble to the Farmer Dashboard. Clicking it opens a static modal describing the future premium subscription (₦500/month) and displaying a mock conversation showing instant crop advice.
+
+### 2. AI Yield + Income Prediction for Banks
+*   **The Vision:** AI synthesizes satellite data, farmer history, and market prices to generate underwriting predictions (e.g., "Farmer A will produce 3 tons and earn ₦1.2M in 4 months").
+*   **Monetization Strategy:**
+    *   **B2B SaaS:** Banks and NAIC pay V4V **₦2,000 per farmer profile** to access auditable data for underwriting loans and insurance.
+    *   **Commission:** V4V takes 1-2% on every loan/insurance policy approved using this predictive data.
+*   **POC Implementation:**
+    > **Placeholder UI Only:** On the Investor/Bank Dashboard, display a static "Risk & Yield Prediction (AI)" card next to a farmer's profile, showing a mock high-confidence score and projected harvest value to illustrate the data banks will pay for.
+
+### 3. AI Market Price + Off-taker Matching
+*   **The Vision:** The system predicts tomorrow’s crop prices (e.g., Maize in Kaduna) and automatically matches the SHF to the highest-paying Aggregator or Processor.
+*   **Monetization Strategy:**
+    *   **Transaction Fee:** The platform retains a 1% markup on every sale closed through the marketplace (already integrated into core mechanics).
+    *   **Premium Subscription:** Large farmers pay **₦1,000/month** to receive predictive price alerts 48 hours early.
+*   **POC Implementation:**
+    > **Placeholder UI Only:** Embed a "Market Trend Forecast" line chart graphic (static image or basic Chart.js mockup) on the Aggregator Dashboard, featuring a "Subscribe for 48hr Early Alerts (₦1,000/mo)" placeholder button.
+
+### 4. AI Post-Harvest Loss Detection
+*   **The Vision:** A farmer takes a photo of their harvest via the app or WhatsApp. The AI scans the image and warns of spoilage risk (e.g., "30% spoilage risk. Sell in 2 days or process").
+*   **Monetization Strategy:**
+    *   **Pay-Per-Scan:** Charge **₦50 per scan** via USSD or App wallet deduction.
+    *   **Data Syndication:** Sell aggregated regional spoilage risk data to processors and aggregators for supply chain planning.
+*   **POC Implementation:**
+    > **Placeholder UI Only:** On the Farmer Dashboard, add a "Scan Harvest Health" button. Clicking it shows a popup with a mock uploaded image of tomatoes, a "30% Spoilage Risk" badge, and a greyed-out "Confirm ₦50 Deduction" prompt to demonstrate the micro-transaction flow.
+
+### 5. AI Training + Certification Automation for KBS
+*   **The Vision:** The system automatically grades digital quizzes, tracks module completion, and instantly generates KBS certificates for the 200 baseline SHFs.
+*   **Monetization Strategy:**
+    *   **B2B to KBS:** Charge KBS **₦3,000 per SHF certified**, drastically saving administrative and staff time.
+    *   **Donor KPI Reports:** Auto-generate impact reports for IFAD/AGRA and charge **₦500,000 per comprehensive report**.
+*   **POC Implementation:**
+    > **Placeholder UI Only:** Within the KBS Training Hub dashboard, include a "Generate IFAD/AGRA Impact Report" button. Clicking it triggers a modal showing a loading bar ("Compiling AI insights..."), followed by a static preview of a generated PDF report and a note on the ₦500k billing structure.
     "bank_name":"GTBank",
     "account_number":"1111111111",
     "gender":"MALE",

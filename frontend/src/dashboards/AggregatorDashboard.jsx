@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowDownLeft, Package, Plus, Search, ShoppingCart, Truck, Users, Wallet } from 'lucide-react';
+import { ArrowDownLeft, BarChart3, Package, Plus, Search, ShoppingCart, Truck, Users, Wallet } from 'lucide-react';
 import { apiV1, money } from '../api';
 import { displayUnit } from '../utils';
 import Page, { Loading, Empty } from '../components/Page';
@@ -116,6 +116,46 @@ export default function AggregatorDashboard({ user }) {
             </table>
           </div>
         )}
+      </div>
+
+      <div className="two-column" style={{ marginTop: 20 }}>
+        <section className="trend-card">
+          <div className="risk-header">
+            <BarChart3 size={20} />
+            <div>
+              <strong>Market Trend Forecast (AI)</strong>
+              <span style={{ display: 'block', fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
+                Predictive price intelligence for Kaduna markets
+              </span>
+            </div>
+          </div>
+          <div className="trend-chart-mock">
+            {[30, 55, 42, 68, 48, 75, 60, 90, 72, 85, 65, 95].map((h, i) => (
+              <div key={i} className={`trend-bar${i % 3 === 0 ? ' alt' : ''}`} style={{ height: `${h}%` }} />
+            ))}
+          </div>
+          <div className="trend-labels">
+            <span>Jan</span><span>Feb</span><span>Mar</span><span>Apr</span><span>May</span><span>Jun</span>
+            <span>Jul</span><span>Aug</span><span>Sep</span><span>Oct</span><span>Nov</span><span>Dec</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 14, marginTop: 12, fontSize: 12 }}>
+            <span><span style={{ display: 'inline-block', width: 12, height: 12, background: 'var(--green-2)', borderRadius: 2, verticalAlign: 'middle', marginRight: 6 }} />Maize</span>
+            <span><span style={{ display: 'inline-block', width: 12, height: 12, background: 'var(--lime)', borderRadius: 2, verticalAlign: 'middle', marginRight: 6, opacity: .7 }} />Soybean</span>
+          </div>
+          <button className="primary-button" disabled style={{ width: '100%', justifyContent: 'center' }}>
+            Subscribe — ₦1,000/month for 48hr early alerts
+          </button>
+          <p className="muted-text" style={{ textAlign: 'center', margin: '8px 0 0' }}>Coming soon</p>
+        </section>
+
+        <section className="panel">
+          <div className="panel-head"><div><h2>Procurement insights</h2><p>Key supplier metrics</p></div></div>
+          <div className="allocation" style={{ flexDirection: 'column', display: 'flex' }}>
+            <div><span>Avg. unit price</span><strong>{money(bought.length ? totalSpent / bought.reduce((s, t) => s + Number(t.quantity_kg), 0) : 0)}/kg</strong><small>Across all commodities</small></div>
+            <div><span>Total volume</span><strong>{bought.reduce((s, t) => s + Number(t.quantity_kg), 0).toLocaleString()} kg</strong><small>Lifetime procurement</small></div>
+            <div><span>Top supplier</span><strong>#{bought.length ? [...bought.reduce((m, t) => (m.set(t.seller_id, (m.get(t.seller_id) || 0) + 1), m), new Map()).entries()].sort((a, b) => b[1] - a[1])[0][0] : '—'}</strong><small>Most frequent seller</small></div>
+          </div>
+        </section>
       </div>
     </Page>
   );

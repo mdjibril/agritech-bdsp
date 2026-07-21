@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { BarChart3, DollarSign, Landmark, LineChart, TrendingUp, Users, Wallet } from 'lucide-react';
+import { BarChart3, BrainCircuit, DollarSign, Landmark, LineChart, TrendingUp, Users, Wallet } from 'lucide-react';
 import { apiV1, money } from '../api';
 import Page, { Loading, Empty } from '../components/Page';
 import Metric from '../components/Metric';
@@ -28,6 +28,54 @@ export default function InvestorDashboard({ user }) {
         <Metric label="Escrow-protected" value={escrowCount} note="Active guarantees" icon={Wallet} />
         <Metric label="Market reach" value={allParticipants} note="Unique participants" icon={Users} />
       </div>
+
+      <section className="risk-card" style={{ marginBottom: 18 }}>
+        <div className="risk-header">
+          <BrainCircuit size={20} />
+          <div>
+            <strong>Risk & Yield Prediction (AI)</strong>
+            <span style={{ display: 'block', fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
+              AI-driven underwriting intelligence for banks and insurers
+            </span>
+          </div>
+        </div>
+        <div className="risk-score">
+          <div className="score-circle">86%</div>
+          <div>
+            <strong>High Confidence — Farmer A (Maize, Chikun LGA)</strong>
+            <span>Projected: 3 tons harvest · ₦1.2M revenue in 4 months</span>
+          </div>
+        </div>
+        <div className="risk-metrics">
+          <div className="risk-metric-item">
+            <span>Yield forecast</span>
+            <strong>3,200 kg</strong>
+          </div>
+          <div className="risk-metric-item">
+            <span>Revenue projection</span>
+            <strong>₦1.2M</strong>
+          </div>
+          <div className="risk-metric-item">
+            <span>Credit viability</span>
+            <strong>Highly viable</strong>
+          </div>
+          <div className="risk-metric-item">
+            <span>Crop risk level</span>
+            <strong style={{ color: 'var(--danger)' }}>Low</strong>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
+          <button className="primary-button" disabled style={{ flex: 1, justifyContent: 'center' }}>
+            Buy profile — ₦2,000/farmer
+          </button>
+          <button className="secondary-button" disabled style={{ flex: 1, justifyContent: 'center' }}>
+            Request underwriting report
+          </button>
+        </div>
+        <p className="muted-text" style={{ textAlign: 'center', margin: '10px 0 0' }}>
+          B2B SaaS — Banks & insurers pay ₦2,000 per farmer profile · Coming soon
+        </p>
+      </section>
 
       <div className="two-column">
         <section className="panel">

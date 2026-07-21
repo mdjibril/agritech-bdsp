@@ -175,6 +175,72 @@ table { width: 100%; border-collapse: collapse; min-width: 900px; }th, td { padd
 .panel-head > div { min-width: 0; }
 .panel-head .search { width: 240px; flex: none; }
 
+/* ---- AI POC: Modal ---- */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: grid; place-items: center; z-index: 100; padding: 20px; }
+.modal-content { background: white; border-radius: 8px; width: 100%; max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.2); }
+.modal-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 22px; border-bottom: 1px solid var(--line); }
+.modal-header h3 { font: 700 17px Georgia, "Times New Roman", serif; margin: 0; }
+.modal-body { padding: 20px 22px; }
+
+/* ---- AI POC: Chat Bubble ---- */
+.chat-bubble { position: fixed; bottom: 28px; right: 28px; width: 56px; height: 56px; background: var(--green); color: white; border: 0; border-radius: 50%; display: grid; place-items: center; box-shadow: 0 4px 18px rgba(22,50,37,.3); z-index: 50; cursor: pointer; transition: transform .15s, box-shadow .15s; }
+.chat-bubble:hover { transform: scale(1.08); box-shadow: 0 6px 24px rgba(22,50,37,.4); }
+
+/* ---- AI POC: Advisor Chat ---- */
+.advisor-chat { display: flex; flex-direction: column; gap: 14px; margin-bottom: 20px; }
+.chat-message { display: flex; gap: 10px; }
+.chat-message.user { justify-content: flex-end; }
+.chat-bubble-text { background: #f3f5f1; padding: 12px 14px; border-radius: 8px; font-size: 13px; line-height: 1.55; max-width: 85%; }
+.chat-message.user .chat-bubble-text { background: #e8f4ed; }
+.chat-bubble-text strong { display: block; font-size: 11px; color: var(--green); margin-bottom: 4px; }
+.chat-bubble-text p { margin: 0; }
+.advisor-chat svg { color: var(--green); flex: none; margin-top: 3px; }
+.premium-card { background: linear-gradient(135deg, #f7f9f6, #edf4ef); border: 1px dashed var(--green-2); border-radius: 8px; padding: 16px; }
+.premium-card strong { display: block; font-size: 14px; margin-bottom: 4px; }
+.premium-card span { display: block; font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+/* ---- AI POC: Harvest Scan ---- */
+.harvest-preview { display: flex; flex-direction: column; gap: 14px; }
+.harvest-image-placeholder { background: #f3f5f1; border: 2px dashed #cfd8d1; border-radius: 8px; padding: 40px 20px; display: flex; flex-direction: column; align-items: center; gap: 10px; color: var(--muted); }
+.harvest-image-placeholder span { font-size: 12px; }
+.spoilage-badge { background: #fff1ef; border-left: 3px solid #b33b2e; padding: 12px 14px; border-radius: 4px; display: flex; align-items: center; gap: 10px; font-size: 13px; color: #8e2e24; }
+.spoilage-badge strong { display: block; }
+
+/* ---- AI POC: Market Trend ---- */
+.trend-card { background: #f7f9f6; border: 1px solid var(--line); border-radius: 8px; padding: 16px; text-align: center; }
+.trend-chart-mock { height: 140px; background: linear-gradient(180deg, rgba(35,98,71,.08) 0%, rgba(35,98,71,.02) 100%); border-radius: 6px; display: flex; align-items: flex-end; justify-content: space-around; padding: 0 12px; margin: 14px 0; }
+.trend-bar { width: 18px; background: var(--green-2); border-radius: 3px 3px 0 0; transition: opacity .2s; }
+.trend-bar.alt { background: var(--lime); opacity: .7; }
+.trend-labels { display: flex; justify-content: space-around; font-size: 10px; color: var(--muted); margin-top: 8px; }
+.trend-card .primary-button { margin-top: 12px; }
+
+/* ---- AI POC: Risk Prediction ---- */
+.risk-card { background: #f7f9f6; border: 1px solid var(--line); border-radius: 8px; padding: 20px; }
+.risk-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+.risk-header svg { color: var(--green-2); }
+.risk-header strong { font-size: 15px; }
+.risk-score { display: flex; align-items: center; gap: 14px; padding: 14px; background: #e8f4ed; border-radius: 6px; margin-bottom: 14px; }
+.risk-score .score-circle { width: 64px; height: 64px; border-radius: 50%; border: 5px solid var(--green-2); display: grid; place-items: center; font: 700 20px Georgia, serif; color: var(--green-2); background: white; flex: none; }
+.risk-score div:last-child { flex: 1; min-width: 0; }
+.risk-score strong { display: block; font-size: 14px; margin-bottom: 3px; }
+.risk-score span { display: block; font-size: 11px; color: var(--muted); }
+.risk-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.risk-metric-item { background: white; border: 1px solid var(--line); border-radius: 4px; padding: 12px; }
+.risk-metric-item span { display: block; font-size: 10px; color: var(--muted); text-transform: uppercase; }
+.risk-metric-item strong { display: block; font: 700 18px Georgia, serif; color: var(--green-2); margin-top: 4px; }
+
+/* ---- AI POC: Report Modal ---- */
+.report-modal .loading-bar { height: 6px; background: #edf0ed; border-radius: 3px; overflow: hidden; margin: 20px 0; }
+.report-modal .loading-bar-fill { height: 100%; width: 70%; background: var(--green-2); border-radius: 3px; animation: reportProgress 2s ease-in-out infinite; }
+@keyframes reportProgress { 0% { width: 20%; } 50% { width: 70%; } 100% { width: 90%; } }
+.report-preview { background: #f7f9f6; border: 1px solid var(--line); border-radius: 8px; padding: 20px; margin: 16px 0; }
+.report-preview-header { text-align: center; padding-bottom: 14px; border-bottom: 1px solid var(--line); margin-bottom: 14px; }
+.report-preview-header strong { display: block; font: 700 16px Georgia, serif; }
+.report-preview-header span { display: block; font-size: 11px; color: var(--muted); margin-top: 3px; }
+.report-preview dl { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0; font-size: 12px; }
+.report-preview dt { color: var(--muted); }
+.report-preview dd { margin: 0; font-weight: 700; }
+
 @media (max-width: 1100px) {
   .metrics-grid { grid-template-columns: repeat(2, 1fr); }
   .listing-grid { grid-template-columns: repeat(2, 1fr); }

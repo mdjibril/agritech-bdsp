@@ -52,8 +52,10 @@ SOLVED: Fix buyer to be optional
 -----for seller debit for transaction and insurance 
 -----debit for insrance, logistic from the buyer
 -----2% for transaction, insurance
-xxxxx-shf, should be able to enroll for training 
-xxxxx-kbs report should be anonymous, report base on gender, 
-xxxxx-climate report based on farmer participation, names should be replaced by user role
-xxxxx-40% for operational cost, v4v gross, the remaining 60% net , 30% will go to bdsp, 70% goes to v4v
+SOLVED-shf, should be able to enroll for training 
+SOLVED-kbs report should be anonymous, report base on gender, 
+SOLVED-climate report based on farmer participation, names should be replaced by user role
+SOLVED-40% for operational cost, v4v gross, the remaining 60% net , 30% will go to bdsp, 70% goes to v4v
 SOLVED-logo
+
+
