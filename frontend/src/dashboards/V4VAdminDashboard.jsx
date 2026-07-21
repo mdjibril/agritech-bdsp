@@ -26,6 +26,7 @@ export default function V4VAdminDashboard({ user }) {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [roleFilter, setRoleFilter] = useState('all');
+  const [bdspFilter, setBdspFilter] = useState('all');
   const [userPage, setUserPage] = useState(0);
   const PER_PAGE = 20;
   const [courses, setCourses] = useState([]);
@@ -49,7 +50,13 @@ export default function V4VAdminDashboard({ user }) {
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
-  useEffect(() => { setUserPage(0); }, [roleFilter]);
+  useEffect(() => { setUserPage(0); }, [roleFilter, bdspFilter]);
+
+  useEffect(() => {
+    if (bdspFilter !== 'all') {
+      setRoleFilter('SHF');
+    }
+  }, [bdspFilter]);
 
   if (loading) return <Loading />;
 
@@ -77,8 +84,6 @@ export default function V4VAdminDashboard({ user }) {
   }
 
   const bdsps = actors.filter((a) => a.actor_type === 'BDSP');
-  const platformBdsp = bdsps.filter((a) => a.is_platform);
-  const normalBdsps = bdsps.filter((a) => !a.is_platform);
   const shfCount = roleCounts['SHF'] || 0;
   const underPlatform = actors.filter((a) => a.actor_type === 'SHF' && a.bdsp_id === 25).length;
 
@@ -86,7 +91,11 @@ export default function V4VAdminDashboard({ user }) {
     .sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at))
     .slice(0, 5);
 
-  const filteredActors = roleFilter === 'all' ? actors : actors.filter((a) => a.actor_type === roleFilter);
+  let filteredActors = roleFilter === 'all' ? actors : actors.filter((a) => a.actor_type === roleFilter);
+  if (bdspFilter !== 'all') {
+    const bdspId = parseInt(bdspFilter, 10);
+    filteredActors = filteredActors.filter((a) => a.bdsp_id === bdspId);
+  }
   const uniqueRoles = [...new Set(actors.map((a) => a.actor_type))];
   const totalPages = Math.ceil(filteredActors.length / PER_PAGE);
   const paginatedActors = filteredActors.slice(userPage * PER_PAGE, (userPage + 1) * PER_PAGE);
@@ -169,7 +178,7 @@ export default function V4VAdminDashboard({ user }) {
       </div>
 
       <section className="panel" style={{ marginBottom: 20 }}>
-        <div className="panel-head"><div><h2>BDSP Network</h2><p>{bdsps.length} total BDSPs — {platformBdsp.length} Platform, {normalBdsps.length} Normal</p></div></div>
+        <div className="panel-head"><div><h2>BDSP Network</h2><p>{bdsps.length} certified BDSPs</p></div></div>
         <div className="table-wrap">
           <table>
             <thead><tr><th>Actor ID</th><th>Name</th><th>Type</th><th>SHF under</th><th>Wallet</th><th>Joined</th></tr></thead>
@@ -180,7 +189,7 @@ export default function V4VAdminDashboard({ user }) {
                   <tr key={b.actor_id}>
                     <td><strong>{b.actor_id}</strong></td>
                     <td>{b.full_name}</td>
-                    <td><span className="role-chip">{b.is_platform ? 'Platform BDSP' : 'Certified BDSP'}</span></td>
+                    <td><span className="role-chip">Certified BDSP</span></td>
                     <td>{under} farmers</td>
                     <td>{money(b.wallet_balance)}</td>
                     <td>{new Date(b.created_at).toLocaleDateString('en-NG', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
@@ -193,10 +202,10 @@ export default function V4VAdminDashboard({ user }) {
       </section>
 
       <section className="panel" style={{ marginBottom: 20 }}>
-        <div className="panel-head"><div><h2>User registry</h2><p>All registered actors — {actors.length} total ({underPlatform} under Platform BDSP)</p></div></div>
+        <div className="panel-head"><div><h2>User registry</h2><p>All registered actors — {actors.length} total ({underPlatform} under V4V Admin BDSP)</p></div></div>
         {actors.length === 0 ? <p className="muted-text">No users found</p> : (
           <>
-            <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span>Filter by role:</span>
                 <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}
@@ -204,6 +213,16 @@ export default function V4VAdminDashboard({ user }) {
                   <option value="all">All ({actors.length})</option>
                   {uniqueRoles.map((role) => (
                     <option key={role} value={role}>{ROLE_LABELS[role] || role} ({roleCounts[role]})</option>
+                  ))}
+                </select>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span>BDSP ID:</span>
+                <select value={bdspFilter} onChange={(e) => setBdspFilter(e.target.value)}
+                  style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid var(--border)' }}>
+                  <option value="all">All BDSPs</option>
+                  {bdsps.map((b) => (
+                    <option key={b.actor_id} value={b.actor_id}>{b.full_name} (#{b.actor_id})</option>
                   ))}
                 </select>
               </label>
@@ -224,7 +243,7 @@ export default function V4VAdminDashboard({ user }) {
                       <td>{a.gender}</td>
                       <td><StatusBadge status={a.kyc_status} /></td>
                       <td>{a.lga}</td>
-                      <td>{a.bdsp_id ? `${a.bdsp_id}${bdsps.find((b) => b.actor_id === a.bdsp_id)?.is_platform ? ' (Platform)' : ''}` : '—'}</td>
+                      <td>{a.bdsp_id ? `${a.bdsp_id}` : '—'}</td>
                       <td>{money(a.wallet_balance)}</td>
                       <td>{new Date(a.created_at).toLocaleDateString('en-NG', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
                     </tr>

@@ -21,6 +21,8 @@ router.get('/completed-transactions', requireAuth, requireRole('KBS', 'AGRA', 'V
              t.commission_v4v, t.commission_bdsp, t.created_at, t.updated_at,
              buyer.full_name AS buyer_name, buyer.actor_id AS buyer_id,
              seller.full_name AS seller_name, seller.actor_id AS seller_id,
+             seller.gender AS seller_gender, seller.bdsp_id AS seller_bdsp_id,
+             buyer.gender AS buyer_gender, buyer.bdsp_id AS buyer_bdsp_id,
              logistics.full_name AS logistics_name
       FROM transactions t
       JOIN actors buyer ON buyer.actor_id = t.buyer_id
@@ -53,7 +55,7 @@ router.get('/farmer-participation', requireAuth, requireRole('KBS', 'V4V_ADMIN')
   try {
     // All SHF actors
     const allShfs = await query(
-      "SELECT actor_id, full_name, phone, gender, lga, state, created_at FROM actors WHERE actor_type = 'SHF' ORDER BY created_at DESC"
+      "SELECT actor_id, full_name, phone, gender, lga, state, bdsp_id, created_at FROM actors WHERE actor_type = 'SHF' ORDER BY created_at DESC"
     );
 
     // SHFs who have completed at least one transaction as seller
@@ -75,6 +77,7 @@ router.get('/farmer-participation', requireAuth, requireRole('KBS', 'V4V_ADMIN')
       gender: f.gender,
       lga: f.lga,
       state: f.state,
+      bdsp_id: f.bdsp_id,
       registered_at: f.created_at,
       has_completed_sale: activeSet.has(Number(f.actor_id)),
       is_repeat_seller: repeatSet.has(Number(f.actor_id)),
