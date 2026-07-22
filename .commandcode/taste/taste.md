@@ -12,3 +12,6 @@
 # ui
 - All commodity measures in post listing forms should use kilograms (kg). Confidence: 0.70
 
+# backend
+- PostgreSQL bigint columns come through node-postgres as strings; use String() comparison rather than parseInt() when filtering by bdsp_id or similar bigint fields. Confidence: 0.70
+

@@ -79,7 +79,7 @@ export default function V4VAdminDashboard({ user }) {
 
   const bdsps = actors.filter((a) => a.actor_type === 'BDSP');
   const shfCount = roleCounts['SHF'] || 0;
-  const underPlatform = actors.filter((a) => a.actor_type === 'SHF' && a.bdsp_id === 25).length;
+  const underPlatform = actors.filter((a) => a.actor_type === 'SHF' && String(a.bdsp_id) === '25').length;
 
   const recentActivity = [...transactions]
     .sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at))
