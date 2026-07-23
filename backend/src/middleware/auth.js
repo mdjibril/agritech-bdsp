@@ -17,7 +17,7 @@ async function loadUserFromToken(req) {
     const result = await query(
       `SELECT actor_id, phone, full_name, actor_type, channel,
               bank_name, account_number, kyc_status, gender, bdsp_id,
-              wallet_balance, lga, state, created_at, is_platform
+              wallet_balance, lga, state, created_at
        FROM actors WHERE actor_id = $1`,
       [payload.sub]
     );

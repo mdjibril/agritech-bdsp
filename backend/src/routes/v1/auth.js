@@ -42,7 +42,7 @@ router.post('/register', requireNpdcConsent, async (req, res, next) => {
     const result = await query(
       `INSERT INTO actors (phone, password_hash, full_name, actor_type, channel, bank_name, account_number, gender, lga, state, kyc_status, bdsp_id)
        VALUES ($1, $2, $3, $4, COALESCE($5, 'WEB'), $6, $7, $8, COALESCE($9, 'Chikun'), COALESCE($10, 'Kaduna'), 'PENDING', $11)
-       RETURNING actor_id, phone, full_name, actor_type, channel, bank_name, account_number, kyc_status, gender, bdsp_id, wallet_balance, lga, state, created_at, is_platform`,
+       RETURNING actor_id, phone, full_name, actor_type, channel, bank_name, account_number, kyc_status, gender, bdsp_id, wallet_balance, lga, state, created_at`,
       [req.body.phone, password_hash, req.body.full_name, req.body.actor_type,
        req.body.channel, req.body.bank_name, req.body.account_number,
        req.body.gender, req.body.lga, req.body.state, bdsp_id]
@@ -76,7 +76,7 @@ router.post('/enroll-farmer', requireAuth, async (req, res, next) => {
     const result = await query(
       `INSERT INTO actors (phone, password_hash, full_name, actor_type, channel, bank_name, account_number, gender, lga, state, kyc_status, bdsp_id)
        VALUES ($1, $2, $3, 'SHF', COALESCE($4, 'WEB'), $5, $6, $7, COALESCE($8, 'Chikun'), COALESCE($9, 'Kaduna'), 'PENDING', $10)
-       RETURNING actor_id, phone, full_name, actor_type, channel, bank_name, account_number, kyc_status, gender, bdsp_id, wallet_balance, lga, state, created_at, is_platform`,
+       RETURNING actor_id, phone, full_name, actor_type, channel, bank_name, account_number, kyc_status, gender, bdsp_id, wallet_balance, lga, state, created_at`,
       [req.body.phone, password_hash, req.body.full_name,
        req.body.channel || 'WEB', req.body.bank_name || 'Pending', req.body.account_number || '0000000000',
        req.body.gender, req.body.lga, req.body.state, req.user.actor_id]
@@ -98,7 +98,7 @@ router.post('/login', async (req, res, next) => {
   try {
     requireFields(req.body, 'phone', 'password');
     const result = await query(
-      'SELECT actor_id, phone, password_hash, full_name, actor_type, channel, bank_name, account_number, kyc_status, gender, bdsp_id, wallet_balance, lga, state, created_at, is_platform FROM actors WHERE phone = $1',
+      'SELECT actor_id, phone, password_hash, full_name, actor_type, channel, bank_name, account_number, kyc_status, gender, bdsp_id, wallet_balance, lga, state, created_at FROM actors WHERE phone = $1',
       [req.body.phone]
     );
     if (!result.rows.length) return next(badRequest('Invalid phone or password'));
