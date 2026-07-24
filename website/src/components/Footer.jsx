@@ -30,7 +30,7 @@ export default function Footer() {
           </div>
           <div>
             <h4 style={{ fontSize: 14, marginBottom: 12, color: 'var(--gold)' }}>Platform</h4>
-            <a href="https://agritech-bdsp-frontend.onrender.com" className="btn btn-gold btn-sm">
+            <a href="https://app.v4vagritech.com.ng" className="btn btn-gold btn-sm">
               Login to Platform
             </a>
           </div>

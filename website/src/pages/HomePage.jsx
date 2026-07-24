@@ -21,7 +21,7 @@ export default function HomePage() {
           </p>
           <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
             <Button variant="gold" href="/solutions">Our Products</Button>
-            <Button variant="outline" href="https://agritech-bdsp-frontend.onrender.com">Login to Platform</Button>
+            <Button variant="outline" href="https://app.v4vagritech.com.ng">Login to Platform</Button>
           </div>
         </div>
       </section>
@@ -86,7 +86,7 @@ export default function HomePage() {
           ))}
         </div>
         <div style={{ textAlign: 'center', marginTop: 32 }}>
-          <Button href="https://agritech-bdsp-frontend.onrender.com">Login to V4V Platform</Button>
+          <Button href="https://app.v4vagritech.com.ng">Login to V4V Platform</Button>
           <p style={{ marginTop: 10, fontSize: 13, color: 'var(--gray)' }}>Demo access available for partners</p>
         </div>
       </Section>

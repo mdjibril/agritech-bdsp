@@ -676,16 +676,15 @@ echo "=== ALL CHECKS PASSED ==="
 
 # Phase 10: Website Deployment Guide
 
-This guide covers deploying the marketing website, connecting a custom domain, setting up subdomains for the dashboard, and provisioning professional email via Zoho Mail.
+This guide covers deploying the marketing website, connecting a custom domain via **DomainKing**, setting up subdomains for the dashboard, and provisioning professional email via Zoho Mail.
 
 ---
 
-## Step 1 — Purchase Domain on Go54
+## Step 1 — Purchase Domain on DomainKing
 
-1. Go to [go54.com](https://go54.com) and search for your preferred domain
-2. Suggested: `v4vagritech.com` or `v4vagritech.com.ng`
-3. Add to cart and complete checkout (₦1,500–₦5,000/year depending on TLD)
-4. After payment, the domain appears in your Go54 dashboard under "Domains"
+1. Go to [domainking.ng](https://domainking.ng) and search for your preferred domain
+2. Purchase: `v4vagritech.com.ng`
+3. After payment, the domain appears in your DomainKing dashboard
 
 ---
 
@@ -704,12 +703,12 @@ This guide covers deploying the marketing website, connecting a custom domain, s
    - **Publish Directory:** `dist`
 5. Click **Create Static Site**
 
-Render will build and deploy. You get a temporary URL like `v4v-website.onrender.com`.
+Render will build and deploy. You get a temporary URL like `agritech-v4v-website.onrender.com`.
 
 ### 2b. Test the deployment
 
 ```bash
-curl -s https://v4v-website.onrender.com | head -20
+curl -s https://agritech-v4v-website.onrender.com | head -20
 ```
 
 **Expected:** Full HTML page with V4V AGRITECH branding, navigation, and hero section.
@@ -723,7 +722,7 @@ curl -s https://v4v-website.onrender.com | head -20
 1. In Render, go to the `v4v-website` dashboard
 2. Click **Settings → Custom Domains**
 3. Add: `v4vagritech.com`
-4. Render gives you a CNAME target (e.g., `www.v4vagritech.com → v4v-website.onrender.com`)
+4. Render gives you a CNAME target (e.g., `www.v4vagritech.com → agritech-v4v-website.onrender.com`)
 5. Note the **CNAME record value** Render provides — you'll need this in Step 4
 
 ### 3b. Also add the www subdomain
@@ -733,56 +732,95 @@ curl -s https://v4v-website.onrender.com | head -20
 
 ---
 
-## Step 4 — Configure DNS Records on Go54
+## Step 4 — Configure DNS Records on DomainKing
 
-Log into Go54, go to **Domain Manager → DNS Records**, and add these records:
+### What DomainKing auto-created when you made the DNS zone
 
-### Root domain (v4vagritech.com)
+DomainKing auto-generates hosting defaults when you create a zone with an IP. Your zone currently has these records:
 
-| Type | Name | Value | TTL |
-|------|------|-------|-----|
-| A | @ | `76.76.21.21` (Vercel/Render anycast — see note below) | 3600 |
+| Name | Type | Value | Action |
+|------|------|-------|--------|
+| `ftp` | A | `216.24.57.1` | **DELETE** — not using FTP |
+| `mail` | A | `216.24.57.1` | **DELETE** — Zoho handles mail |
+| `pop` | A | `216.24.57.1` | **DELETE** — Zoho handles mail |
+| `smtp` | A | `216.24.57.1` | **DELETE** — Zoho handles mail |
+| `@` (root) | A | `216.24.57.1` | **KEEP** — this is your root domain ✓ |
+| `www` | A | `216.24.57.1` | **DELETE** — replace with Canonical |
+| `@` | NS | `dan1.host-ww.net.` | **KEEP** — DomainKing nameserver ✓ |
+| `@` | NS | `dan2.host-ww.net.` | **KEEP** — DomainKing nameserver ✓ |
+| `@` | MX | `mail.v4vagritech.com.ng.` | **DELETE** — replace with Zoho MX |
+| `@` | TXT | `v=spf1 a mx ip4:102.218.215.41 ~all` | **DELETE** — replace with Zoho SPF |
 
-> **Note:** Render static sites do not support bare A records. Use one of these workarounds:
-> - **Option A (Recommended):** Add a `CNAME` for `www` and set Go54 to forward `@` → `www`. Most domain registrars have a "Domain Forwarding" option in their dashboard.
-> - **Option B:** Use Cloudflare (free) as your DNS provider instead of Go54. Cloudflare supports CNAME flattening at the root. Point Go54 nameservers to Cloudflare, then add a `CNAME` for `@` pointing to `v4v-website.onrender.com`.
+### Step-by-step changes to make
 
-### WWW subdomain
+#### Step 4a — DELETE these 4 auto-created A records
 
-| Type | Name | Value | TTL |
-|------|------|-------|-----|
-| CNAME | www | `<your-render-site>.onrender.com` | 3600 |
+DomainKing created these hosting defaults. You don't need them — Zoho handles email, not your server:
+- **ftp** (A record)
+- **mail** (A record)
+- **pop** (A record)
+- **smtp** (A record)
 
-### Dashboard subdomain
+#### Step 4b — DELETE www A record, then CREATE www Canonical Record
 
-| Type | Name | Value | TTL |
-|------|------|-------|-----|
-| CNAME | app | `agritech-bdsp-frontend.onrender.com` | 3600 |
+1. Delete the `www` **A record** (cannot have both A and CNAME for the same name)
+2. Create a new **Canonical Record** (DomainKing's term for CNAME):
 
-### Backend API subdomain (optional)
+| Field | Value |
+|---|---|
+| Type | **Canonical Record** |
+| Name | `www.v4vagritech.com.ng` |
+| Target | `agritech-v4v-website.onrender.com.` |
 
-| Type | Name | Value | TTL |
-|------|------|-------|-----|
-| CNAME | api | `agritech-bdsp-back.onrender.com` | 3600 |
+> ⚠️ **Trailing dot is critical.** Without it, DomainKing appends your domain and creates `onrender.com.v4vagritech.com.ng` — invalid.
+
+#### Step 4c — CREATE app Canonical Record
+
+| Field | Value |
+|---|---|
+| Type | **Canonical Record** |
+| Name | `app.v4vagritech.com.ng` |
+| Target | `agritech-bdsp-frontend.onrender.com.` |
+
+#### Step 4d — DELETE the auto-created MX record
+
+DomainKing created: `@ MX 10 mail.v4vagritech.com.ng.` — this routes mail to your server. Delete it.
+
+#### Step 4e — DELETE the auto-created TXT (SPF) record
+
+DomainKing created: `"v=spf1 a mx ip4:102.218.215.41 ~all"` — this authorizes the wrong server. Delete it.
+
+#### Step 4f — KEEP these records as-is
+
+| Name | Type | Value | Notes |
+|------|------|-------|-------|
+| `@` (root) | A | `216.24.57.1` | Your Render IP — correct |
+| `@` | NS | `dan1.host-ww.net.` | DomainKing nameserver |
+| `@` | NS | `dan2.host-ww.net.` | DomainKing nameserver |
+
+### What your DNS zone should look like after cleanup
+
+| Name | Type | Value | Priority |
+|------|------|-------|----------|
+| `v4vagritech.com.ng` | A | `216.24.57.1` | - |
+| `www.v4vagritech.com.ng` | Canonical (CNAME) | `agritech-v4v-website.onrender.com` | - |
+| `app.v4vagritech.com.ng` | Canonical (CNAME) | `agritech-bdsp-frontend.onrender.com` | - |
+| `v4vagritech.com.ng` | NS | `dan1.host-ww.net.` | - |
+| `v4vagritech.com.ng` | NS | `dan2.host-ww.net.` | - |
+
+> ⚠️ **Do NOT add any MX or TXT records yet.** Zoho email is set up in Step 7. DNS is a dependency chain: get the website working first, then configure email. Mixing records too early causes the "CNAME and other data" error you saw.
 
 ---
 
 ## Step 5 — Verify DNS Propagation
 
-DNS changes can take up to 48 hours but usually resolve within 15-30 minutes.
-
 ```bash
-# Check CNAME for www
-dig www.v4vagritech.com CNAME
-
-# Check CNAME for app subdomain
-dig app.v4vagritech.com CNAME
-
-# Full DNS check (alternative)
-nslookup www.v4vagritech.com
+dig v4vagritech.com.ng A
+dig www.v4vagritech.com.ng CNAME
+dig app.v4vagritech.com.ng CNAME
 ```
 
-Once `www.v4vagritech.com` resolves to Render, the SSL certificate auto-provisions (Render handles this — no manual setup).
+Wait 15-30 minutes. Render auto-provisions SSL once DNS resolves.
 
 ---
 
@@ -802,7 +840,7 @@ After DNS is live, update the Login button URLs from the temporary Render URL to
 href="https://agritech-bdsp-frontend.onrender.com"
 
 // With:
-href="https://app.v4vagritech.com"
+href="https://app.v4vagritech.com.ng"
 ```
 
 After updating, commit and push. Render auto-redeploys from the `main` branch.
@@ -819,46 +857,42 @@ After updating, commit and push. Render auto-redeploys from the `main` branch.
 4. Choose the **Free Plan** (up to 5 users, 5GB each)
 5. Create the first account: `phillip.makama@v4vagritech.com`
 
-### 7b. Verify domain ownership
+### 7b. Verify domain ownership (TXT Record)
 
-Zoho gives you 3 options. Choose **DNS (TXT Record):**
+Zoho gives you a verification code. In DomainKing:
 
-1. Copy the TXT verification code Zoho provides
-2. Go back to Go54 → DNS Records → Add Record:
+- Type: **TXT Record**
+- Name: `v4vagritech.com.ng`
+- Value: `zoho-verification=xxxxxxxxx`
+- TTL: 3600
 
-| Type | Name | Value | TTL |
-|------|------|-------|-----|
-| TXT | @ | `zoho-verification=xxxxxxxxx` | 3600 |
+Wait 5-10 minutes, click **Verify** in Zoho.
 
-3. Wait 5-10 minutes, then click **Verify** in Zoho
+### 7c. Add MX Records for email delivery
 
-### 7c. Add MX Records for Email Delivery
-
-Once verified, Zoho provides MX records. Add all three to Go54:
+In DomainKing:
 
 | Type | Name | Value | Priority |
 |------|------|-------|----------|
-| MX | @ | `mx.zoho.com` | 10 |
-| MX | @ | `mx2.zoho.com` | 20 |
-| MX | @ | `mx3.zoho.com` | 50 |
+| MX Record | `v4vagritech.com.ng` | `mx.zoho.com` | 10 |
+| MX Record | `v4vagritech.com.ng` | `mx2.zoho.com` | 20 |
+| MX Record | `v4vagritech.com.ng` | `mx3.zoho.com` | 50 |
 
-### 7d. Add SPF + DKIM Records (Email Authentication)
-
-| Type | Name | Value | TTL |
-|------|------|-------|-----|
-| TXT | @ | `v=spf1 include:zoho.com ~all` | 3600 |
-
-Zoho also provides a DKIM record (a longer TXT record). Find it in Zoho Admin → Domains → DKIM. Add it as a TXT record:
+### 7d. Add SPF + DKIM Records
 
 | Type | Name | Value | TTL |
 |------|------|-------|-----|
-| TXT | `zoho._domainkey` | (DKIM value from Zoho) | 3600 |
+| TXT Record | `v4vagritech.com.ng` | `v=spf1 include:zoho.com ~all` | 3600 |
 
-### 7e. Create info@ email account
+Zoho also provides a DKIM record. In Zoho Admin → Domains → DKIM:
 
-1. In Zoho Admin → **Users** → **Add User**
-2. Username: `info`
-3. Assign a temporary password
+| Type | Name | Value | TTL |
+|------|------|-------|-----|
+| TXT Record | `zoho._domainkey.v4vagritech.com.ng` | (value from Zoho) | 3600 |
+
+### 7e. Create info@ account
+
+Zoho Admin → **Users** → **Add User** → Username: `info`
 
 ### 7f. Test email
 
@@ -893,32 +927,31 @@ onSubmit={async (e) => {
 
 ---
 
-## DNS Record Summary (Full List)
+## DNS Record Summary (Full List for DomainKing)
 
-After all setup, your Go54 DNS should look like this:
-
-| Type | Name | Value | Priority | Notes |
-|------|------|-------|----------|-------|
-| A | @ | `76.76.21.21` | - | Root domain (or use forward to www) |
-| CNAME | www | `v4v-website.onrender.com` | - | Marketing website |
-| CNAME | app | `agritech-bdsp-frontend.onrender.com` | - | Dashboard platform |
-| CNAME | api | `agritech-bdsp-back.onrender.com` | - | Backend API (optional) |
-| MX | @ | `mx.zoho.com` | 10 | Email receiving |
-| MX | @ | `mx2.zoho.com` | 20 | Email receiving |
-| MX | @ | `mx3.zoho.com` | 50 | Email receiving |
-| TXT | @ | `v=spf1 include:zoho.com ~all` | - | SPF authentication |
-| TXT | @ | `zoho-verification=...` | - | Domain verification |
-| TXT | zoho._domainkey | `v=DKIM1; k=rsa; p=...` | - | DKIM signing |
+| Type (DomainKing) | Name | Value | Priority | Purpose |
+|---|---|---|---|---|
+| A Record | `v4vagritech.com.ng` | `216.24.57.1` | - | Root website |
+| Canonical Record (CNAME) | `www.v4vagritech.com.ng` | `agritech-v4v-website.onrender.com.` | - | www redirect |
+| Canonical Record (CNAME) | `app.v4vagritech.com.ng` | `agritech-bdsp-frontend.onrender.com.` | - | Dashboard |
+| Canonical Record (CNAME) | `api.v4vagritech.com.ng` | `agritech-bdsp-back.onrender.com.` | - | Backend API |
+| MX Record | `v4vagritech.com.ng` | `mx.zoho.com` | 10 | Email |
+| MX Record | `v4vagritech.com.ng` | `mx2.zoho.com` | 20 | Email |
+| MX Record | `v4vagritech.com.ng` | `mx3.zoho.com` | 50 | Email |
+| TXT Record | `v4vagritech.com.ng` | `v=spf1 include:zoho.com ~all` | - | SPF |
+| TXT Record | `v4vagritech.com.ng` | `zoho-verification=...` | - | Verification |
+| TXT Record | `zoho._domainkey.v4vagritech.com.ng` | `v=DKIM1; k=rsa; p=...` | - | DKIM |
 
 ---
 
 ## Final Verification Checklist
 
-- [ ] `www.v4vagritech.com` loads the marketing website with HTTPS
-- [ ] `app.v4vagritech.com` loads the dashboard login page
-- [ ] `phillip.makama@v4vagritech.com` receives email
-- [ ] `info@v4vagritech.com` receives email
+- [ ] `v4vagritech.com.ng` loads the marketing website with HTTPS
+- [ ] `www.v4vagritech.com.ng` redirects to `v4vagritech.com.ng`
+- [ ] `app.v4vagritech.com.ng` loads the dashboard login page
+- [ ] `phillip.makama@v4vagritech.com.ng` receives email
+- [ ] `info@v4vagritech.com.ng` receives email
 - [ ] Sending from Zoho to Gmail works (not marked as spam)
-- [ ] Login buttons on all website pages point to `app.v4vagritech.com`
-- [ ] All partner logos load correctly on the website
+- [ ] Login buttons on all website pages point to `app.v4vagritech.com.ng`
+- [ ] All partner logos load correctly
 - [ ] Mobile hamburger menu works on phone viewport

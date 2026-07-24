@@ -28,7 +28,7 @@ export default function PlatformPage() {
       <div style={{ textAlign: 'center' }}>
         <Button variant="primary" href="/contact">Request Platform Access</Button>
         <p style={{ marginTop: 12, fontSize: 14, color: 'var(--gray)' }}>
-          Already have an account? <a href="https://agritech-bdsp-frontend.onrender.com" style={{ color: 'var(--green-deep)', fontWeight: 600 }}>Login Here</a>
+          Already have an account? <a href="https://app.v4vagritech.com.ng" style={{ color: 'var(--green-deep)', fontWeight: 600 }}>Login Here</a>
         </p>
       </div>
     </Section>
