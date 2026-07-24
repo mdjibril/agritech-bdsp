@@ -54,8 +54,8 @@ export function Card({ icon, title, description, children }) {
 export function StatCard({ value, label }) {
   return (
     <div style={{ textAlign: 'center', padding: 24 }}>
-      <div style={{ fontSize: 'clamp(28px, 4vw, 48px)', fontWeight: 800, color: 'var(--green-deep)', marginBottom: 6 }}>{value}</div>
-      <div style={{ fontSize: 14, color: 'var(--gray)', fontWeight: 600 }}>{label}</div>
+      <div style={{ fontSize: 'clamp(28px, 4vw, 48px)', fontWeight: 800, color: '#1B5E20', marginBottom: 6 }}>{value}</div>
+      <div style={{ fontSize: 14, color: '#4A4A4A', fontWeight: 600 }}>{label}</div>
     </div>
   );
 }

@@ -36,7 +36,7 @@ export default function PilotsPage() {
         </div>
       </div>
 
-      <div style={{ background: 'var(--green-deep)', color: 'var(--white)', borderRadius: 'var(--radius-lg)', padding: 40, marginBottom: 40 }}>
+      <div style={{ background: '#1B5E20', color: '#FFFFFF', borderRadius: 'var(--radius-lg)', padding: 40, marginBottom: 40 }}>
         <h3 style={{ fontSize: 22, marginBottom: 24 }}>Impact Targets</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 24 }}>
           <div><div style={{ fontSize: 36, fontWeight: 800 }}>0%</div><div style={{ opacity: 0.8, marginTop: 4 }}>Loan Default through escrow and automatic repayment</div></div>
