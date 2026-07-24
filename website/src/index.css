@@ -1,0 +1,70 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --green-deep: #1B5E20;
+  --green-light: #2E7D32;
+  --gold: #FFC107;
+  --gold-dark: #F9A825;
+  --white: #FFFFFF;
+  --off-white: #F5F7F5;
+  --dark: #1A1A1A;
+  --gray: #666666;
+  --gray-light: #999999;
+  --border: #E0E0E0;
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --shadow: 0 4px 24px rgba(0,0,0,0.08);
+  --shadow-lg: 0 12px 48px rgba(0,0,0,0.12);
+  --radius: 8px;
+  --radius-lg: 12px;
+  --max-width: 1200px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; font-size: 16px; }
+
+body {
+  font-family: var(--font);
+  color: var(--dark);
+  background: var(--white);
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+img { max-width: 100%; display: block; }
+a { color: inherit; text-decoration: none; }
+button { font: inherit; cursor: pointer; border: none; }
+
+h1, h2, h3, h4 { line-height: 1.2; font-weight: 800; }
+
+.container { max-width: var(--max-width); margin: 0 auto; padding: 0 24px; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 14px 32px; border-radius: var(--radius); font-weight: 700; font-size: 15px;
+  transition: all 0.2s; text-align: center;
+}
+.btn-primary { background: var(--green-deep); color: var(--white); }
+.btn-primary:hover { background: var(--green-light); transform: translateY(-1px); box-shadow: var(--shadow); }
+.btn-gold { background: var(--gold); color: var(--dark); }
+.btn-gold:hover { background: var(--gold-dark); transform: translateY(-1px); box-shadow: var(--shadow); }
+.btn-outline { border: 2px solid var(--white); color: var(--white); }
+.btn-outline:hover { background: rgba(255,255,255,0.1); }
+.btn-outline-dark { border: 2px solid var(--green-deep); color: var(--green-deep); }
+.btn-outline-dark:hover { background: var(--green-deep); color: var(--white); }
+.btn-sm { padding: 10px 20px; font-size: 13px; }
+
+.section { padding: 80px 0; }
+.section-dark { background: var(--green-deep); color: var(--white); }
+.section-light { background: var(--off-white); }
+
+.section-header { text-align: center; margin-bottom: 48px; }
+.section-header h2 { font-size: clamp(28px, 4vw, 42px); margin-bottom: 12px; }
+.section-header p { color: var(--gray); font-size: 18px; max-width: 640px; margin: 0 auto; }
+.section-dark .section-header p { color: rgba(255,255,255,0.75); }
+
+@media (max-width: 768px) {
+  .container { padding: 0 16px; }
+  .section { padding: 48px 0; }
+  .btn { padding: 12px 24px; font-size: 14px; }
+}

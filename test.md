@@ -671,3 +671,254 @@ echo -n "Activity Log: " && docker exec -i agritech-bdsp-postgres psql -U agrite
 echo -n "Frontend Build: " && cd /home/mdjibril/Github/agritech-bdsp/frontend && npm run build 2>&1 | grep -q 'built' && echo "OK" && \
 echo "=== ALL CHECKS PASSED ==="
 ```
+
+---
+
+# Phase 10: Website Deployment Guide
+
+This guide covers deploying the marketing website, connecting a custom domain, setting up subdomains for the dashboard, and provisioning professional email via Zoho Mail.
+
+---
+
+## Step 1 — Purchase Domain on Go54
+
+1. Go to [go54.com](https://go54.com) and search for your preferred domain
+2. Suggested: `v4vagritech.com` or `v4vagritech.com.ng`
+3. Add to cart and complete checkout (₦1,500–₦5,000/year depending on TLD)
+4. After payment, the domain appears in your Go54 dashboard under "Domains"
+
+---
+
+## Step 2 — Deploy Website to Render (Static Site)
+
+### 2a. Create a new Static Site on Render
+
+1. Log into [render.com](https://render.com)
+2. Click **New → Static Site**
+3. Connect your GitHub/GitLab repo (`mdjibril/agritech-bdsp`)
+4. Configure:
+   - **Name:** `v4v-website`
+   - **Branch:** `main`
+   - **Root Directory:** `website`
+   - **Build Command:** `npm install && npm run build`
+   - **Publish Directory:** `dist`
+5. Click **Create Static Site**
+
+Render will build and deploy. You get a temporary URL like `v4v-website.onrender.com`.
+
+### 2b. Test the deployment
+
+```bash
+curl -s https://v4v-website.onrender.com | head -20
+```
+
+**Expected:** Full HTML page with V4V AGRITECH branding, navigation, and hero section.
+
+---
+
+## Step 3 — Set Up Custom Domain on Render
+
+### 3a. Add custom domain to the Static Site
+
+1. In Render, go to the `v4v-website` dashboard
+2. Click **Settings → Custom Domains**
+3. Add: `v4vagritech.com`
+4. Render gives you a CNAME target (e.g., `www.v4vagritech.com → v4v-website.onrender.com`)
+5. Note the **CNAME record value** Render provides — you'll need this in Step 4
+
+### 3b. Also add the www subdomain
+
+1. Add a second custom domain: `www.v4vagritech.com`
+2. Render redirects it automatically, or you can point it to the same target
+
+---
+
+## Step 4 — Configure DNS Records on Go54
+
+Log into Go54, go to **Domain Manager → DNS Records**, and add these records:
+
+### Root domain (v4vagritech.com)
+
+| Type | Name | Value | TTL |
+|------|------|-------|-----|
+| A | @ | `76.76.21.21` (Vercel/Render anycast — see note below) | 3600 |
+
+> **Note:** Render static sites do not support bare A records. Use one of these workarounds:
+> - **Option A (Recommended):** Add a `CNAME` for `www` and set Go54 to forward `@` → `www`. Most domain registrars have a "Domain Forwarding" option in their dashboard.
+> - **Option B:** Use Cloudflare (free) as your DNS provider instead of Go54. Cloudflare supports CNAME flattening at the root. Point Go54 nameservers to Cloudflare, then add a `CNAME` for `@` pointing to `v4v-website.onrender.com`.
+
+### WWW subdomain
+
+| Type | Name | Value | TTL |
+|------|------|-------|-----|
+| CNAME | www | `<your-render-site>.onrender.com` | 3600 |
+
+### Dashboard subdomain
+
+| Type | Name | Value | TTL |
+|------|------|-------|-----|
+| CNAME | app | `agritech-bdsp-frontend.onrender.com` | 3600 |
+
+### Backend API subdomain (optional)
+
+| Type | Name | Value | TTL |
+|------|------|-------|-----|
+| CNAME | api | `agritech-bdsp-back.onrender.com` | 3600 |
+
+---
+
+## Step 5 — Verify DNS Propagation
+
+DNS changes can take up to 48 hours but usually resolve within 15-30 minutes.
+
+```bash
+# Check CNAME for www
+dig www.v4vagritech.com CNAME
+
+# Check CNAME for app subdomain
+dig app.v4vagritech.com CNAME
+
+# Full DNS check (alternative)
+nslookup www.v4vagritech.com
+```
+
+Once `www.v4vagritech.com` resolves to Render, the SSL certificate auto-provisions (Render handles this — no manual setup).
+
+---
+
+## Step 6 — Update Login Links in Website Code
+
+After DNS is live, update the Login button URLs from the temporary Render URL to the custom subdomain.
+
+### Files to update:
+- **`website/src/components/Header.jsx`** — Login button in nav
+- **`website/src/components/Footer.jsx`** — "Login to Platform" button
+- **`website/src/pages/HomePage.jsx`** — Hero and Platform section login buttons
+- **`website/src/pages/SolutionsPage.jsx`** — Platform CTA login button
+- **`website/src/pages/PlatformPage.jsx`** — "Login Here" link
+
+```jsx
+// Replace all instances of:
+href="https://agritech-bdsp-frontend.onrender.com"
+
+// With:
+href="https://app.v4vagritech.com"
+```
+
+After updating, commit and push. Render auto-redeploys from the `main` branch.
+
+---
+
+## Step 7 — Set Up Zoho Mail (Free Tier — up to 5 users)
+
+### 7a. Create Zoho Mail account
+
+1. Go to [zoho.com/mail](https://www.zoho.com/mail)
+2. Click **Sign Up → Business Email**
+3. Select **"I have a domain"** and enter `v4vagritech.com`
+4. Choose the **Free Plan** (up to 5 users, 5GB each)
+5. Create the first account: `phillip.makama@v4vagritech.com`
+
+### 7b. Verify domain ownership
+
+Zoho gives you 3 options. Choose **DNS (TXT Record):**
+
+1. Copy the TXT verification code Zoho provides
+2. Go back to Go54 → DNS Records → Add Record:
+
+| Type | Name | Value | TTL |
+|------|------|-------|-----|
+| TXT | @ | `zoho-verification=xxxxxxxxx` | 3600 |
+
+3. Wait 5-10 minutes, then click **Verify** in Zoho
+
+### 7c. Add MX Records for Email Delivery
+
+Once verified, Zoho provides MX records. Add all three to Go54:
+
+| Type | Name | Value | Priority |
+|------|------|-------|----------|
+| MX | @ | `mx.zoho.com` | 10 |
+| MX | @ | `mx2.zoho.com` | 20 |
+| MX | @ | `mx3.zoho.com` | 50 |
+
+### 7d. Add SPF + DKIM Records (Email Authentication)
+
+| Type | Name | Value | TTL |
+|------|------|-------|-----|
+| TXT | @ | `v=spf1 include:zoho.com ~all` | 3600 |
+
+Zoho also provides a DKIM record (a longer TXT record). Find it in Zoho Admin → Domains → DKIM. Add it as a TXT record:
+
+| Type | Name | Value | TTL |
+|------|------|-------|-----|
+| TXT | `zoho._domainkey` | (DKIM value from Zoho) | 3600 |
+
+### 7e. Create info@ email account
+
+1. In Zoho Admin → **Users** → **Add User**
+2. Username: `info`
+3. Assign a temporary password
+
+### 7f. Test email
+
+```bash
+# From any email account, send a test email to phillip.makama@v4vagritech.com
+# Verify it lands in the Zoho inbox (not spam)
+
+# Also test sending from Zoho to an external address (e.g., Gmail)
+```
+
+---
+
+## Step 8 — Update Contact Form (Optional)
+
+The contact form on the website currently shows an alert. To make it send real email, update `ContactPage.jsx`:
+
+```jsx
+// Replace:
+onSubmit={(e) => { e.preventDefault(); alert('Message received!'); }}
+
+// With a POST to a lightweight backend or a service like Formspree:
+onSubmit={async (e) => {
+  e.preventDefault();
+  const formData = new FormData(e.target);
+  await fetch('https://formspree.io/f/your-form-id', {
+    method: 'POST',
+    body: formData,
+  });
+  alert('Message sent! We will get back to you shortly.');
+}}
+```
+
+---
+
+## DNS Record Summary (Full List)
+
+After all setup, your Go54 DNS should look like this:
+
+| Type | Name | Value | Priority | Notes |
+|------|------|-------|----------|-------|
+| A | @ | `76.76.21.21` | - | Root domain (or use forward to www) |
+| CNAME | www | `v4v-website.onrender.com` | - | Marketing website |
+| CNAME | app | `agritech-bdsp-frontend.onrender.com` | - | Dashboard platform |
+| CNAME | api | `agritech-bdsp-back.onrender.com` | - | Backend API (optional) |
+| MX | @ | `mx.zoho.com` | 10 | Email receiving |
+| MX | @ | `mx2.zoho.com` | 20 | Email receiving |
+| MX | @ | `mx3.zoho.com` | 50 | Email receiving |
+| TXT | @ | `v=spf1 include:zoho.com ~all` | - | SPF authentication |
+| TXT | @ | `zoho-verification=...` | - | Domain verification |
+| TXT | zoho._domainkey | `v=DKIM1; k=rsa; p=...` | - | DKIM signing |
+
+---
+
+## Final Verification Checklist
+
+- [ ] `www.v4vagritech.com` loads the marketing website with HTTPS
+- [ ] `app.v4vagritech.com` loads the dashboard login page
+- [ ] `phillip.makama@v4vagritech.com` receives email
+- [ ] `info@v4vagritech.com` receives email
+- [ ] Sending from Zoho to Gmail works (not marked as spam)
+- [ ] Login buttons on all website pages point to `app.v4vagritech.com`
+- [ ] All partner logos load correctly on the website
+- [ ] Mobile hamburger menu works on phone viewport
