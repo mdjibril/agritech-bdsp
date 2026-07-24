@@ -59,3 +59,6 @@ SOLVED-40% for operational cost, v4v gross, the remaining 60% net , 30% will go 
 SOLVED-logo
 
 
+investor is empty
+agra export what is expected of it
+bdsp on show 30% of their own for now 

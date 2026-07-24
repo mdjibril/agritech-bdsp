@@ -179,6 +179,8 @@
 
 ## Phase 7: V4V MARKETPLACE: FINANCIAL & COMMISSION MECHANICS (FINAL SPEC)
 
+- [x] **Phase 7 Complete:** Financial markup model implemented — buyer-side markup with 2% embedded insurance, 1% marketplace fee, and 10% logistics coordination fee. Commission trigger auto-calculates `commission_v4v` and `commission_bdsp`. Dual-lock escrow with 5-way automated revenue split (Insurance Provider 80%, Gateway Reserve 2%, BDSP 40% of residual, V4V Admin 40% of residual, Operations Reserve 20% of residual). Commission ledger visible in V4V Admin dashboard with full breakdown.
+
 ## 1. Transaction Financial Summary (Markup Model)
 All fees are calculated using a buyer-side markup architecture. The seller receives 100% of their listed asset value without deductions, ensuring high retention and acquisition of agricultural merchants.
 
@@ -228,61 +230,250 @@ Once the dual-lock Proof of Delivery (POD) resolves to true, the escrow sub-syst
 ### D. Total Consolidated V4V Admin Revenue for this transaction:
 *   $$\text{Total Admin Income} = 720\ (\text{Insurance Split}) + 5,000\ (\text{Marketplace Fee}) + 2,000\ (\text{Logistics Coordination}) = \mathbf{7,720\ NGN}$$
 
----
-
 ## Phase 8: AI Integration & Monetization Proof of Concepts (POC)
 *Objective: Deploy lightweight, placeholder UI components to demonstrate future AI capabilities and monetization pathways to banks, donors (KBS/AGRA), and investors.*
 
-### 1. AI Agronomist Chatbot ("V4V Farm Advisor")
-*   **The Vision:** Farmers ask questions in Hausa/English via WhatsApp (e.g., "My maize leaves are yellow. What do I do?"). The AI gives instant advice based on weather, soil, and crop stage.
-*   **Monetization Strategy:**
-    *   **Freemium Model:** Basic advice is free. Premium tier is **₦500/month** for personalized advice and specific input recommendations.
-    *   **Donor-Funded (B2B):** KBS/AGRA pay V4V per farmer trained, scaling education without requiring physical trainers on every farm.
-*   **POC Implementation:**
-    > **Placeholder UI Only:** Add a visible "Ask V4V Advisor" chat bubble to the Farmer Dashboard. Clicking it opens a static modal describing the future premium subscription (₦500/month) and displaying a mock conversation showing instant crop advice.
-
-### 2. AI Yield + Income Prediction for Banks
-*   **The Vision:** AI synthesizes satellite data, farmer history, and market prices to generate underwriting predictions (e.g., "Farmer A will produce 3 tons and earn ₦1.2M in 4 months").
-*   **Monetization Strategy:**
-    *   **B2B SaaS:** Banks and NAIC pay V4V **₦2,000 per farmer profile** to access auditable data for underwriting loans and insurance.
-    *   **Commission:** V4V takes 1-2% on every loan/insurance policy approved using this predictive data.
-*   **POC Implementation:**
-    > **Placeholder UI Only:** On the Investor/Bank Dashboard, display a static "Risk & Yield Prediction (AI)" card next to a farmer's profile, showing a mock high-confidence score and projected harvest value to illustrate the data banks will pay for.
-
-### 3. AI Market Price + Off-taker Matching
-*   **The Vision:** The system predicts tomorrow’s crop prices (e.g., Maize in Kaduna) and automatically matches the SHF to the highest-paying Aggregator or Processor.
-*   **Monetization Strategy:**
-    *   **Transaction Fee:** The platform retains a 1% markup on every sale closed through the marketplace (already integrated into core mechanics).
-    *   **Premium Subscription:** Large farmers pay **₦1,000/month** to receive predictive price alerts 48 hours early.
-*   **POC Implementation:**
-    > **Placeholder UI Only:** Embed a "Market Trend Forecast" line chart graphic (static image or basic Chart.js mockup) on the Aggregator Dashboard, featuring a "Subscribe for 48hr Early Alerts (₦1,000/mo)" placeholder button.
-
-### 4. AI Post-Harvest Loss Detection
-*   **The Vision:** A farmer takes a photo of their harvest via the app or WhatsApp. The AI scans the image and warns of spoilage risk (e.g., "30% spoilage risk. Sell in 2 days or process").
-*   **Monetization Strategy:**
-    *   **Pay-Per-Scan:** Charge **₦50 per scan** via USSD or App wallet deduction.
-    *   **Data Syndication:** Sell aggregated regional spoilage risk data to processors and aggregators for supply chain planning.
-*   **POC Implementation:**
-    > **Placeholder UI Only:** On the Farmer Dashboard, add a "Scan Harvest Health" button. Clicking it shows a popup with a mock uploaded image of tomatoes, a "30% Spoilage Risk" badge, and a greyed-out "Confirm ₦50 Deduction" prompt to demonstrate the micro-transaction flow.
-
-### 5. AI Training + Certification Automation for KBS
-*   **The Vision:** The system automatically grades digital quizzes, tracks module completion, and instantly generates KBS certificates for the 200 baseline SHFs.
-*   **Monetization Strategy:**
-    *   **B2B to KBS:** Charge KBS **₦3,000 per SHF certified**, drastically saving administrative and staff time.
-    *   **Donor KPI Reports:** Auto-generate impact reports for IFAD/AGRA and charge **₦500,000 per comprehensive report**.
-*   **POC Implementation:**
-    > **Placeholder UI Only:** Within the KBS Training Hub dashboard, include a "Generate IFAD/AGRA Impact Report" button. Clicking it triggers a modal showing a loading bar ("Compiling AI insights..."), followed by a static preview of a generated PDF report and a note on the ₦500k billing structure.
+- [x] **Task 8.0 (Git Workflow):** Created and merged feature branch: `feature/phase-8-ai-integration-poc`
+- [x] **Task 8.1:** AI Agronomist Chatbot — Floating "Ask V4V Advisor" chat bubble on SHF Dashboard with mock conversation and ₦500/month premium upsell modal.
+- [x] **Task 8.2:** AI Yield + Income Prediction — "Risk & Yield Prediction (AI)" card on Investor Dashboard with 86% confidence score, mock yield forecast, and ₦2,000/farmer B2B pricing.
+- [x] **Task 8.3:** AI Market Price + Off-taker Matching — "Market Trend Forecast" static bar chart on Aggregator Dashboard with ₦1,000/month 48hr early alert subscription placeholder.
+- [x] **Task 8.4:** AI Post-Harvest Loss Detection — "Scan Harvest Health" button on SHF Dashboard with mock tomato image, 30% spoilage badge, and ₦50 pay-per-scan prompt.
+- [x] **Task 8.5:** AI Training + Certification Automation — "Generate IFAD/AGRA Impact Report (AI)" button on KBS Dashboard with loading bar, live stats preview, and ₦500,000 billing note.
+- [x] **Task 8.6 (Git Workflow):** Committed, merged to `main`, and pushed.
 
 ---
 
 ## Phase 9: Validation, Compliance, & Production Hardening
 *Objective: Run multi-channel verification tests and extract compliance audit trails.*
 
-- [ ] **Task 7.0 (Git Workflow):** Create and checkout a new isolated stabilization and hardening branch:
+- [ ] **Task 9.0 (Git Workflow):** Create and checkout a new isolated stabilization and hardening branch:
   `git checkout -b feature/phase-7-compliance-validation`
-- [ ] **Task 7.1:** Execute end-to-end multi-channel sync validation tracking (Register user via simulated WhatsApp data payload -> confirm matching database record entry inside `actors` -> inspect real-time visual output on the Web Management Grid).
-- [ ] **Task 7.2:** Build the **IFC Monitoring & Evaluation Data Webhook Endpoint** (`/webhooks/ifc`) to summarize and export aggregate data, including total transaction volume, lending portfolios, and women onboarding ratios.
-- [ ] **Task 7.3:** Verify the **NITDA Secure Compliance Extraction Endpoint** (`/api/v1/activity/export`), ensuring it properly compiles and streams active transaction logs into a clean, comma-separated format.
-- [ ] **Task 7.4 (Git Workflow):** Commit changes, push to remote, and merge `feature/phase-7-compliance-validation` back to `main`.
+- [ ] **Task 9.1:** Execute end-to-end multi-channel sync validation tracking (Register user via simulated WhatsApp data payload -> confirm matching database record entry inside `actors` -> inspect real-time visual output on the Web Management Grid).
+- [ ] **Task 9.2:** Build the **IFC Monitoring & Evaluation Data Webhook Endpoint** (`/webhooks/ifc`) to summarize and export aggregate data, including total transaction volume, lending portfolios, and women onboarding ratios.
+- [ ] **Task 9.3:** Verify the **NITDA Secure Compliance Extraction Endpoint** (`/api/v1/activity/export`), ensuring it properly compiles and streams active transaction logs into a clean, comma-separated format.
+- [ ] **Task 9.4 (Git Workflow):** Commit changes, push to remote, and merge `feature/phase-7-compliance-validation` back to `main`.
   `git add . && git commit -m "Phase 7 complete: End-to-end validation & platform production ready"`
   `git checkout main && git merge feature/phase-7-compliance-validation`
+
+---
+
+## Phase 10: V4V Agritech Website Content & Structure
+
+**NAVIGATION MENU**
+Home | About | Solutions | Pilots | Platform | Investors | Partners | Contact | **[Login Button]**
+
+---
+
+### 0. TECHNICAL NOTES FOR DEVELOPER
+1. **Domain Options:** v4vagritech.com or v4vagritech.ng / .org, etc.
+2. **Emails to provision:** phillip.makama@v4vagritech.com and info@v4vagritech.com
+3. **Design System:** 
+   *   Colors: Deep Green `#1B5E20`, Gold `#FFC107`, White. 
+   *   Architecture: Mobile-first.
+4. **Typography:** Font: Inter
+5. **Brand Assets Required:** Logo, Founder photo, farmer photos. Partner logos: TRIPLE A, DBN, KBS, NB.
+6. **PDF Assets:** `V4V_Board_Summary_Chikun_July2026_v4.pdf` - (Must update to include INPUTS FOR HARVESTS).
+7. **Platform Link Routing:** Link the "Login" buttons to `app.v4vagritech.com`
+
+---
+
+### 1. HOME PAGE
+
+**Hero Section**
+*   **Headline:** V4V AGRITECH SOLUTIONS LTD
+*   **Subheadline:** Climate-Smart. Data-Driven. Farmer-First.
+*   **Copy:** We provide AI-powered risk monitoring and financial infrastructure to de-risk lending to smallholder farmers in Nigeria.
+*   **Calls to Action:** `[Button 1: Our Products]` `[Button 2: Login to Platform]`
+
+**Section 2: The Problem**
+*   **Copy:** 80% of Nigerian farmers cannot access affordable credit. Banks see risk. Farmers see opportunity. V4V bridges the gap with data.
+
+**Section 2B: OUR NORTH STAR**
+*   **Our Vision:** Climate-Smart. Profitable. Bankable. Food Secure.
+*   **Our Mission:** Data + Finance + Offtake for every SHF
+
+**Section 3: Our Solutions**
+*   **1. INPUTS FOR HARVESTS:** Our flagship financing product. Farmers receive inputs based on AI Credit Score. Repayment happens automatically at harvest through guaranteed offtake.
+*   **2. Climate-Smart AI Monitoring:** Satellite + weather + soil data to predict yield and flag risk early.
+*   **3. Escrow & Payment Infrastructure:** Bank funds are released to input suppliers, not cash. Every naira is tracked.
+*   **4. Cooperative Management:** We onboard, train, and manage 10+ Co-operatives for group liability and accountability.
+*   **5. Market Offtake Linkage:** We connect harvest to guaranteed buyers like Nigerian Breweries.
+
+**Section 3B: The V4V Platform**
+*   **Headline:** THE V4V MARKETPLACE & DATA PLATFORM
+*   **Subheadline:** Our technology is live. A digital platform connecting Farmers, Coops, Banks, Input Suppliers, Offtakers, BDSPs and Investors in one ecosystem.
+*   **What it does:**
+    1. **AI Credit Scoring:** Every farmer gets a V4V Credit Passport 300-850.
+    2. **Digital Onboarding:** Farmers and Co-operatives register in minutes.
+    3. **Loan & Input Tracking:** Lenders monitor disbursement and repayment in real-time.
+    4. **Escrow Management:** Payments go directly to input suppliers.
+    5. **AI Risk Dashboard:** Climate, yield, and compliance monitoring.
+    6. **Market Linkage:** Offtakers place orders directly on the platform.
+    7. **BDSP Network:** Manage V4V and external BDSPs for training at scale.
+    8. **M&E Reporting:** Automated reports for DBN, KBS, IFAD, IFC.
+    9. **Investor Dashboard:** Real-time impact, financial, and ESG reporting.
+*   **Calls to Action:** `[Button: Login to V4V Platform]` *(Small text: Demo access available for partners)*
+
+**Section 4: Current Pilot**
+*   **Headline:** CHIKUN 200-FARMER PILOT
+*   **Details:** 
+    *   Kaduna State, Nigeria
+    *   200 Smallholder Farmers
+    *   10 Co-operatives
+    *   ₦55,000,000 Facility with TRIPLE A Microfinance Bank
+*   **Pilot Product:** INPUTS FOR HARVESTS (₦25,000,000 in inputs disbursed via AI Credit Score + Escrow)
+*   **Technical Partners:** Development Bank of Nigeria & Kaduna Business School
+*   **Goal:** Prove that AI + escrow + offtake = 0% default lending to Smallholders.
+*   **Calls to Action:** `[Button: Download Board Summary PDF]`
+
+**Section 5: For Investors**
+*   **Headline:** INVEST IN THE FUTURE OF AFRICAN AGRICULTURE
+*   **Copy:** V4V de-risks Smallholder lending using AI, Data, and Partnerships.
+*   **Why Invest:**
+    1. **Proven Product:** INPUTS FOR HARVESTS pilot with TRIPLE A MFB + DBN + KBS.
+    2. **Scalable:** AI Credit Score + BDSP network.
+    3. **Impact:** 40% yield increase, 0% default target, poverty reduction.
+    4. **Data:** Full transparency on loan performance and farmer outcomes.
+*   **Calls to Action:** `[Button: Request Investor Brief]` *(Small text: Pitch Deck and Data Room available)*
+
+**Section 6: Partners**
+*   **Headline:** Our Partners
+*   **Logos to Display:** TRIPLE A Microfinance Bank | Development Bank of Nigeria | Kaduna Business School | Nigerian Breweries
+*   **Text:** In discussions with: IFAD, IFC, AGRA, SMEDAN
+
+**Footer CTA**
+*   **Headline:** Ready to de-risk agriculture with us?
+*   **Calls to Action:** `[Button: Contact Us]`
+
+---
+
+### 2. ABOUT PAGE
+
+**Section: Vision & Mission**
+*   **Headline:** Building the Financial Rails for African Agriculture
+*   **Our Vision:** A Climate-Smart Nigeria where every Smallholder Farmer is profitable, bankable and food secure.
+*   **Our Mission:** To de-risk agriculture and unlock markets for SHFs by combining AI-Driven Climate Smart Data, Access to Finance, and guaranteed Offtake through cooperative structures.
+
+**Body Copy**
+V4V Agritech Solutions Ltd was founded to solve one problem: Banks don’t lend to Smallholder Farmers because they can’t see the risk. We change that. 
+
+Using AI Credit Scoring, real-time data, and cooperative structures, V4V creates a "credit passport" for every farmer. This allows banks like TRIPLE A and development institutions like DBN to lend with confidence through our INPUTS FOR HARVESTS product. Our goal is to unlock ₦100 Billion in agricultural lending and lift 200,000 farmers out of poverty by 2030.
+
+**Our Values**
+1. **Farmer-First:** Every product must increase farmer income.
+2. **Data Integrity:** What we measure, we can finance.
+3. **Partnership:** We win when banks, government, and farmers win.
+
+**Founder & CEO: Makama Phillip Shehu**
+Phillip is an Agribusiness and Development Finance Professional committed to de-risking agriculture for Smallholder Farmers. He leads V4V Agritech to build the financial and data infrastructure that makes every SHF profitable, bankable, and food secure.
+
+---
+
+### 3. SOLUTIONS PAGE
+
+**Headline:** Our Products
+
+**1. INPUTS FOR HARVESTS**
+*   *Give farmers inputs today. Repay with harvest tomorrow.*
+*   **How it works:**
+    *   Step 1: AI Credit Score assesses farmer capacity and capability.
+    *   Step 2: Inputs delivered via escrow to verified Suppliers.
+    *   Step 3: V4V + BDSPs monitor farm through season.
+    *   Step 4: Harvest bought by Offtaker. Loan repaid automatically.
+*   **Who it's for:** Smallholder Farmers in Co-operatives.
+
+**2. V4V AI CREDIT SCORE**
+*   *The "Credit Passport" for every farmer.*
+*   **Our AI scores farmers using:**
+    *   Satellite farm data and soil health
+    *   Training and coop participation
+    *   Climate and yield risk modeling
+    *   Repayment history
+*   **Result:** Banks can lend, Farmers get bigger limits each season.
+
+**3. V4V PLATFORM**
+*   *The operating system for agricultural finance.*
+
+---
+
+### 4. PILOTS PAGE
+
+**Headline:** Chikun Climate-Smart Sorghum & Maize Pilot
+
+**Pilot Details:**
+*   **Location:** Chikun LGA, Kaduna State
+*   **Farmers:** 200 Smallholders across 10 Co-operatives
+*   **Crops:** Sorghum and Maize
+*   **Product:** INPUTS FOR HARVESTS
+*   **Value Chain:** Input → Production → Harvest → Offtake to Nigerian Breweries
+
+**The Model:**
+1. **Finance:** ₦55M from TRIPLE A Microfinance Bank.
+2. **Inputs:** ₦25M Escrow for input procurement based on AI Credit Score.
+3. **Training:** Financial literacy + Climate-Smart practices by Development Bank of Nigeria in collaboration with Kaduna Business School.
+4. **Technology:** V4V AI Platform for monitoring, compliance, and reporting.
+5. **Market:** Guaranteed offtake through NB and other aggregators.
+
+**Impact Targets:**
+*   0% Loan Default through escrow and automatic repayment.
+*   40% Increase in farmer yield.
+*   10 Co-operatives formally registered and bankable.
+
+*This pilot is the blueprint for scaling INPUTS FOR HARVESTS to 200,000 farmers.*
+`[Button: Request Partnership Brief]`
+
+---
+
+### 5. PLATFORM / ONBOARDING PAGE
+
+**Headline:** Join the V4V Ecosystem
+**Copy:** V4V is more than a pilot. It’s a platform. Select your role below to request access:
+
+1. **Farmer:** Join a cooperative and access inputs + credit.
+2. **Cooperative Leader:** Manage your members and group loan.
+3. **Lender / Bank:** De-risk your agricultural portfolio with real-time data.
+4. **Input Supplier:** Get paid faster through escrow.
+5. **Offtaker:** Secure your supply chain with verified farmers.
+6. **Technical Partner:** DBN, KBS: Deliver training and monitor impact.
+7. **V4V BDSP:** V4V Field Agent: Onboard Co-operatives and deliver training.
+8. **BDSP Partner:** External BDS Provider: Use V4V tools to serve farmers.
+9. **Investor:** Track impact, risk, and co-investment opportunities.
+10. **Admin:** V4V Team: Manage platform, data, and operations.
+
+`[Button: Request Platform Access]`
+*Already have an account? `[Login Here]`*
+
+---
+
+### 6. INVESTORS PAGE
+
+**Headline:** Partner With Us to Scale
+**Copy:** V4V is building the infrastructure to unlock ₦100B for African farmers.
+
+**Investment Opportunity:**
+*   Seed/Series A for INPUTS FOR HARVESTS platform scale.
+*   Co-investment in pilot facilities with TRIPLE A MFB.
+*   Impact-first capital with measurable returns.
+
+**What You Get:**
+1. Access to Investor Dashboard with real-time portfolio data.
+2. Quarterly Impact + Financial Reports.
+3. Co-branding on national scale pilots.
+
+`[Button: Download Pitch Deck]` `[Button: Book Investor Call]`
+
+---
+
+### 7. CONTACT PAGE
+
+**Headline:** Let’s Build the Future of Agriculture Together
+
+**Company Info:**
+*   **Name:** V4V Agritech Solutions Ltd - RC: 9673943
+*   **Address:** RSQ 049, Pipeline Close, Kamazou, Kaduna State, Nigeria
+*   **Email:** phillip.makama@v4vagritech.com
+*   **Phone:** +234 810 252 9947
+*   **WhatsApp:** +234 810 252 9947
+
+`[Contact Form: Name, Organization, Role, Message]`
+`[Google Map Embed]`

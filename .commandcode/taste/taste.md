@@ -5,6 +5,7 @@
 # workflow
 - When diagnosing issues, explain the root cause and analysis before proposing or implementing changes. Confidence: 0.70
 - When fixing one instance of misleading or hardcoded prototype data, proactively find and fix all similar instances across the codebase instead of only the one pointed out. Confidence: 0.70
+- When the user explicitly asks for advice or explanation (e.g., "KINDLY ADVICE/EXPLAIN ONLY"), do not modify code — provide analysis and recommendations only. Confidence: 0.75
 
 # architecture
 - BDSP actors are normal BDSPs with is_platform=false; the V4V_ADMIN role holds is_platform=true, can enroll farmers, and has oversight of all BDSPs and their network members. Self-registered SHFs default under the V4V admin's network. Confidence: 0.85
@@ -14,4 +15,7 @@
 
 # backend
 - PostgreSQL bigint columns come through node-postgres as strings; use String() comparison rather than parseInt() when filtering by bdsp_id or similar bigint fields. Confidence: 0.70
+
+# testing
+- Prefer browser-based UI tests over terminal/curl tests when the feature can be verified through the browser. Terminal tests should be reserved for internal state that has no UI (database schema, API-only endpoints, file system checks). Confidence: 0.70
 
